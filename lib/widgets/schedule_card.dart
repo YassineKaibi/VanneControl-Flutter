@@ -5,8 +5,8 @@ import '../theme/app_theme.dart';
 class ScheduleCard extends StatelessWidget {
   final String name;
   final String valveName;
-  final String onTime;
-  final String offTime;
+  final String? onTime;
+  final String? offTime;
   final String repeatText;
   final bool isEnabled;
   final ValueChanged<bool>? onToggle;
@@ -17,8 +17,8 @@ class ScheduleCard extends StatelessWidget {
     super.key,
     required this.name,
     required this.valveName,
-    required this.onTime,
-    required this.offTime,
+    this.onTime,
+    this.offTime,
     required this.repeatText,
     required this.isEnabled,
     this.onToggle,
@@ -81,66 +81,62 @@ class ScheduleCard extends StatelessWidget {
               ),
             ),
             // ON time row
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primaryGreen,
+            if (onTime != null)
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.primaryGreen,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'ON',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryGreen,
+                  const SizedBox(width: 8),
+                  const Text(
+                    'ON',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryGreen,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  onTime,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.black,
+                  const Spacer(),
+                  Text(
+                    onTime!,
+                    style: const TextStyle(fontSize: 14, color: AppColors.black),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
+                ],
+              ),
+            if (onTime != null && offTime != null) const SizedBox(height: 8),
             // OFF time row
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.deleteRed,
+            if (offTime != null)
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.deleteRed,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'OFF',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.deleteRed,
+                  const SizedBox(width: 8),
+                  const Text(
+                    'OFF',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.deleteRed,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  offTime,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.black,
+                  const Spacer(),
+                  Text(
+                    offTime!,
+                    style: const TextStyle(fontSize: 14, color: AppColors.black),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             const SizedBox(height: 12),
             // Repeat row with edit/delete
             Row(

@@ -76,8 +76,8 @@ class SchedulingScreen extends ConsumerWidget {
                             return ScheduleCard(
                               name: plan.name,
                               valveName: valveName,
-                              onTime: plan.onTime,
-                              offTime: plan.offTime,
+                              onTime: plan.activateEntry != null ? plan.onTime : null,
+                              offTime: plan.deactivateEntry != null ? plan.offTime : null,
                               repeatText: repeatDisplay,
                               isEnabled: plan.enabled,
                               onToggle: (v) => ref.read(scheduleProvider.notifier).togglePlan(plan, v),
