@@ -1,54 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/schedule_card.dart';
+import '../providers/schedule_provider.dart';
+import '../providers/valve_provider.dart';
 
-class SchedulingScreen extends StatefulWidget {
+class SchedulingScreen extends ConsumerWidget {
   const SchedulingScreen({super.key});
 
   @override
-  State<SchedulingScreen> createState() => _SchedulingScreenState();
-}
-
-class _SchedulingScreenState extends State<SchedulingScreen> {
-  final List<Map<String, dynamic>> _schedules = [
-    {
-      'name': 'Morning Irrigation',
-      'valve': 'Valve 1',
-      'onTime': '08:00',
-      'offTime': '20:00',
-      'repeat': 'Everyday',
-      'enabled': true,
-    },
-    {
-      'name': 'Evening Watering',
-      'valve': 'Valve 3',
-      'onTime': '18:30',
-      'offTime': '19:30',
-      'repeat': 'Weekdays',
-      'enabled': true,
-    },
-    {
-      'name': 'Weekend Cycle',
-      'valve': 'Valve 2',
-      'onTime': '10:00',
-      'offTime': '12:00',
-      'repeat': 'Weekends',
-      'enabled': false,
-    },
-  ];
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final schedState = ref.watch(scheduleProvider);
+    final valveState = ref.watch(valveProvider);
 
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
         child: Column(
           children: [
-            // Custom top bar
+            // Top bar
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -72,112 +45,57 @@ class _SchedulingScreenState extends State<SchedulingScreen> {
                         'assets/icons/arrow_back.svg',
                         width: 24,
                         height: 24,
-                        colorFilter: const ColorFilter.mode(
-                          AppColors.black,
-                          BlendMode.srcIn,
-                        ),
+                        colorFilter: const ColorFilter.mode(AppColors.black, BlendMode.srcIn),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     l10n.timingPlan,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.black,
-                    ),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.black),
                   ),
                 ],
               ),
             ),
 
-            // Schedule list or empty state
+            // List
             Expanded(
-              child: _schedules.isEmpty
-                  ? _buildEmptyState(l10n)
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _schedules.length,
-                      itemBuilder: (context, index) {
-                        final schedule = _schedules[index];
-                        return ScheduleCard(
-                          name: schedule['name'] as String,
-                          valveName: schedule['valve'] as String,
-                          onTime: schedule['onTime'] as String,
-                          offTime: schedule['offTime'] as String,
-                          repeatText: schedule['repeat'] as String,
-                          isEnabled: schedule['enabled'] as bool,
-                          onToggle: (value) {
-                            setState(() {
-                              schedule['enabled'] = value;
-                            });
-                          },
-                          onEdit: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(l10n.todoImplement)),
+              child: schedState.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : schedState.plans.isEmpty
+                      ? _EmptyState(l10n: l10n)
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: schedState.plans.length,
+                          itemBuilder: (context, index) {
+                            final plan = schedState.plans[index];
+                            final valveName = '${l10n.valve} ${plan.pistonNumber}';
+                            return ScheduleCard(
+                              name: plan.name,
+                              valveName: valveName,
+                              onTime: plan.onTime,
+                              offTime: plan.offTime,
+                              repeatText: plan.repeatText,
+                              isEnabled: plan.enabled,
+                              onToggle: (v) => ref.read(scheduleProvider.notifier).togglePlan(plan, v),
+                              onEdit: null,
+                              onDelete: () => _confirmDelete(context, ref, l10n, plan),
                             );
                           },
-                          onDelete: () {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: Text(l10n.deleteSchedule),
-                                content: Text(l10n.deleteScheduleConfirm),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: Text(l10n.cancel),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _schedules.removeAt(index);
-                                      });
-                                      Navigator.pop(ctx);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                            content:
-                                                Text(l10n.scheduleDeleted)),
-                                      );
-                                    },
-                                    child: Text(
-                                      l10n.delete,
-                                      style: const TextStyle(
-                                          color: AppColors.deleteRed),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
+                        ),
             ),
 
-            // Bottom Add button
+            // Add button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.todoImplement)),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(
-                    l10n.add,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  onPressed: valveState.devices.isEmpty
+                      ? null
+                      : () => _showAddDialog(context, ref, l10n, valveState),
+                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                  child: Text(l10n.add, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
@@ -187,36 +105,251 @@ class _SchedulingScreenState extends State<SchedulingScreen> {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n) {
+  void _confirmDelete(BuildContext context, WidgetRef ref, AppLocalizations l10n, plan) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteSchedule),
+        content: Text(l10n.deleteScheduleConfirm),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(scheduleProvider.notifier).deletePlan(plan);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.scheduleDeleted)),
+              );
+            },
+            child: Text(l10n.delete, style: const TextStyle(color: AppColors.deleteRed)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n, ValveState valveState) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _AddScheduleSheet(l10n: l10n, valveState: valveState, ref: ref),
+    );
+  }
+}
+
+class _AddScheduleSheet extends StatefulWidget {
+  final AppLocalizations l10n;
+  final ValveState valveState;
+  final WidgetRef ref;
+
+  const _AddScheduleSheet({required this.l10n, required this.valveState, required this.ref});
+
+  @override
+  State<_AddScheduleSheet> createState() => _AddScheduleSheetState();
+}
+
+class _AddScheduleSheetState extends State<_AddScheduleSheet> {
+  final _nameController = TextEditingController();
+  int _selectedDeviceIndex = 0;
+  int _pistonNumber = 1;
+  TimeOfDay _onTime = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay _offTime = const TimeOfDay(hour: 20, minute: 0);
+  bool _useOnTime = false;
+  bool _useOffTime = false;
+  String _repeat = 'Everyday';
+  bool _isLoading = false;
+
+  final _repeats = ['Everyday', 'Weekdays', 'Weekends', 'Once'];
+
+  String _fmt(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickTime(bool isOn) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: isOn ? _onTime : _offTime,
+    );
+    if (picked != null) {
+      setState(() => isOn ? _onTime = picked : _offTime = picked);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_nameController.text.trim().isEmpty) return;
+    if (!_useOnTime && !_useOffTime) return;
+    final device = widget.valveState.devices[_selectedDeviceIndex];
+    setState(() => _isLoading = true);
+    final error = await widget.ref.read(scheduleProvider.notifier).addSchedule(
+          name: _nameController.text.trim(),
+          deviceId: device.id,
+          pistonNumber: _pistonNumber,
+          onHour: _useOnTime ? _onTime.hour : null,
+          onMinute: _useOnTime ? _onTime.minute : null,
+          offHour: _useOffTime ? _offTime.hour : null,
+          offMinute: _useOffTime ? _offTime.minute : null,
+          repeat: _repeat,
+        );
+    if (mounted) {
+      if (error != null) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $error'), backgroundColor: Colors.red),
+        );
+      } else {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.l10n.scheduleSaved)),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    final devices = widget.valveState.devices;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Text(l10n.add, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+
+          // Name
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(labelText: l10n.scheduleName),
+          ),
+          const SizedBox(height: 12),
+
+          // Device selector
+          if (devices.length > 1) ...[
+            DropdownButtonFormField<int>(
+              value: _selectedDeviceIndex,
+              decoration: const InputDecoration(labelText: 'Device'),
+              items: List.generate(devices.length, (i) => DropdownMenuItem(value: i, child: Text(devices[i].name))),
+              onChanged: (i) => setState(() => _selectedDeviceIndex = i!),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Valve number
+          DropdownButtonFormField<int>(
+            value: _pistonNumber,
+            decoration: InputDecoration(labelText: l10n.selectValve),
+            items: List.generate(8, (i) => DropdownMenuItem(value: i + 1, child: Text('${l10n.valve} ${i + 1}'))),
+            onChanged: (v) => setState(() => _pistonNumber = v!),
+          ),
+          const SizedBox(height: 12),
+
+          // ON time
+          Row(
+            children: [
+              Checkbox(
+                value: _useOnTime,
+                activeColor: AppColors.primaryGreen,
+                onChanged: (v) => setState(() => _useOnTime = v!),
+              ),
+              Expanded(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'ON  ${_fmt(_onTime)}',
+                    style: TextStyle(
+                      color: _useOnTime ? AppColors.primaryGreen : AppColors.grayDisabled,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  trailing: Icon(Icons.access_time, color: _useOnTime ? AppColors.primaryGreen : AppColors.grayDisabled),
+                  onTap: _useOnTime ? () => _pickTime(true) : null,
+                ),
+              ),
+            ],
+          ),
+
+          // OFF time
+          Row(
+            children: [
+              Checkbox(
+                value: _useOffTime,
+                activeColor: AppColors.deleteRed,
+                onChanged: (v) => setState(() => _useOffTime = v!),
+              ),
+              Expanded(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'OFF  ${_fmt(_offTime)}',
+                    style: TextStyle(
+                      color: _useOffTime ? AppColors.deleteRed : AppColors.grayDisabled,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  trailing: Icon(Icons.access_time, color: _useOffTime ? AppColors.deleteRed : AppColors.grayDisabled),
+                  onTap: _useOffTime ? () => _pickTime(false) : null,
+                ),
+              ),
+            ],
+          ),
+
+          // Repeat
+          DropdownButtonFormField<String>(
+            value: _repeat,
+            decoration: InputDecoration(labelText: l10n.repeat),
+            items: _repeats.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+            onChanged: (v) => setState(() => _repeat = v!),
+          ),
+          const SizedBox(height: 20),
+
+          // Save button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _isLoading ? null : _submit,
+              child: _isLoading
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(l10n.save, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final AppLocalizations l10n;
+  const _EmptyState({required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SvgPicture.asset(
             'assets/icons/timing_plan.svg',
-            width: 80,
-            height: 80,
-            colorFilter: ColorFilter.mode(
-              AppColors.grayDisabled.withAlpha(102),
-              BlendMode.srcIn,
-            ),
+            width: 80, height: 80,
+            colorFilter: ColorFilter.mode(AppColors.grayDisabled.withAlpha(102), BlendMode.srcIn),
           ),
           const SizedBox(height: 16),
-          Text(
-            l10n.noSchedules,
-            style: const TextStyle(
-              fontSize: 18,
-              color: AppColors.grayIcon,
-            ),
-          ),
+          Text(l10n.noSchedules, style: const TextStyle(fontSize: 18, color: AppColors.grayIcon)),
           const SizedBox(height: 8),
-          Text(
-            l10n.tapAddSchedule,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.grayDisabled,
-            ),
-          ),
+          Text(l10n.tapAddSchedule, style: const TextStyle(fontSize: 14, color: AppColors.grayDisabled)),
         ],
       ),
     );
