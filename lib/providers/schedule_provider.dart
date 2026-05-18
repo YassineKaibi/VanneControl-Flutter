@@ -65,8 +65,8 @@ class SchedulePlan {
     if (parts.length < 6) return '';
     final dayOfWeek = parts.length > 5 ? parts[5] : '*';
     if (dayOfWeek == '*' || dayOfWeek == '?') return 'Everyday';
-    if (dayOfWeek == 'MON-FRI') return 'Weekdays';
-    if (dayOfWeek == 'SAT,SUN') return 'Weekends';
+    if (dayOfWeek == 'MON-FRI' || dayOfWeek == 'MON,TUE,WED,THU,FRI' || dayOfWeek == '2-6') return 'Weekdays';
+    if (dayOfWeek == 'SAT,SUN' || dayOfWeek == '1,7' || dayOfWeek == '6,7') return 'Weekends';
     return 'Once';
   }
 }
@@ -83,10 +83,10 @@ class ScheduleState {
   });
 }
 
-String buildCron(int hour, int minute, String repeat) {
+String buildCron(int hour, int minute, String repeat, {DateTime? onceDate}) {
   // Convert local time to UTC for server-side cron execution
-  final now = DateTime.now();
-  final local = DateTime(now.year, now.month, now.day, hour, minute);
+  final baseDate = onceDate ?? DateTime.now();
+  final local = DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
   final utc = local.toUtc();
   final h = utc.hour;
   final m = utc.minute;
@@ -95,7 +95,7 @@ String buildCron(int hour, int minute, String repeat) {
     case 'Everyday':
       return '0 $m $h * * ?';
     case 'Weekdays':
-      return '0 $m $h ? * MON-FRI';
+      return '0 $m $h ? * MON,TUE,WED,THU,FRI';
     case 'Weekends':
       return '0 $m $h ? * SAT,SUN';
     default: // Once
@@ -150,6 +150,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
     required int? offHour,
     required int? offMinute,
     required String repeat,
+    DateTime? onceDate,
   }) async {
     try {
       final futures = <Future>[];
@@ -159,7 +160,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
           'deviceId': deviceId,
           'pistonNumber': pistonNumber,
           'action': 'ACTIVATE',
-          'cronExpression': buildCron(onHour, onMinute, repeat),
+          'cronExpression': buildCron(onHour, onMinute, repeat, onceDate: onceDate),
           'enabled': true,
         }));
       }
@@ -169,7 +170,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
           'deviceId': deviceId,
           'pistonNumber': pistonNumber,
           'action': 'DEACTIVATE',
-          'cronExpression': buildCron(offHour, offMinute, repeat),
+          'cronExpression': buildCron(offHour, offMinute, repeat, onceDate: onceDate),
           'enabled': true,
         }));
       }

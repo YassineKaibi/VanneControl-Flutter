@@ -78,7 +78,7 @@ class SchedulingScreen extends ConsumerWidget {
                               repeatText: plan.repeatText,
                               isEnabled: plan.enabled,
                               onToggle: (v) => ref.read(scheduleProvider.notifier).togglePlan(plan, v),
-                              onEdit: null,
+                              onEdit: () => _showEditDialog(context, ref, l10n, valveState, plan),
                               onDelete: () => _confirmDelete(context, ref, l10n, plan),
                             );
                           },
@@ -136,29 +136,77 @@ class SchedulingScreen extends ConsumerWidget {
       builder: (_) => _AddScheduleSheet(l10n: l10n, valveState: valveState, ref: ref),
     );
   }
+
+  void _showEditDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n, ValveState valveState, plan) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _AddScheduleSheet(l10n: l10n, valveState: valveState, ref: ref, editPlan: plan),
+    );
+  }
 }
 
 class _AddScheduleSheet extends StatefulWidget {
   final AppLocalizations l10n;
   final ValveState valveState;
   final WidgetRef ref;
+  final dynamic editPlan;
 
-  const _AddScheduleSheet({required this.l10n, required this.valveState, required this.ref});
+  const _AddScheduleSheet({required this.l10n, required this.valveState, required this.ref, this.editPlan});
 
   @override
   State<_AddScheduleSheet> createState() => _AddScheduleSheetState();
 }
 
 class _AddScheduleSheetState extends State<_AddScheduleSheet> {
-  final _nameController = TextEditingController();
+  late final TextEditingController _nameController;
   int _selectedDeviceIndex = 0;
-  int _pistonNumber = 1;
-  TimeOfDay _onTime = const TimeOfDay(hour: 8, minute: 0);
-  TimeOfDay _offTime = const TimeOfDay(hour: 20, minute: 0);
-  bool _useOnTime = false;
-  bool _useOffTime = false;
-  String _repeat = 'Everyday';
+  late int _pistonNumber;
+  late TimeOfDay _onTime;
+  late TimeOfDay _offTime;
+  late bool _useOnTime;
+  late bool _useOffTime;
+  late String _repeat;
+  DateTime? _onceDate;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final plan = widget.editPlan;
+    if (plan != null) {
+      _nameController = TextEditingController(text: plan.name);
+      _pistonNumber = plan.pistonNumber;
+      _useOnTime = plan.activateEntry != null;
+      _useOffTime = plan.deactivateEntry != null;
+      _onTime = _useOnTime ? _parseTime(plan.onTime) : const TimeOfDay(hour: 8, minute: 0);
+      _offTime = _useOffTime ? _parseTime(plan.offTime) : const TimeOfDay(hour: 20, minute: 0);
+      _repeat = plan.repeatText.isEmpty ? 'Everyday' : plan.repeatText;
+      _onceDate = _repeat == 'Once' ? DateTime.now() : null;
+      // Find device index
+      final devices = widget.valveState.devices;
+      final idx = devices.indexWhere((d) => d.id == plan.deviceId);
+      _selectedDeviceIndex = idx >= 0 ? idx : 0;
+    } else {
+      _nameController = TextEditingController();
+      _pistonNumber = 1;
+      _useOnTime = false;
+      _useOffTime = false;
+      _onTime = const TimeOfDay(hour: 8, minute: 0);
+      _offTime = const TimeOfDay(hour: 20, minute: 0);
+      _repeat = 'Everyday';
+    }
+  }
+
+  TimeOfDay _parseTime(String t) {
+    try {
+      final parts = t.split(':');
+      return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    } catch (_) {
+      return const TimeOfDay(hour: 8, minute: 0);
+    }
+  }
 
   final _repeats = ['Everyday', 'Weekdays', 'Weekends', 'Once'];
 
@@ -169,6 +217,17 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _onceDate ?? now,
+      firstDate: now,
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked != null) setState(() => _onceDate = picked);
   }
 
   Future<void> _pickTime(bool isOn) async {
@@ -184,8 +243,15 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
   Future<void> _submit() async {
     if (_nameController.text.trim().isEmpty) return;
     if (!_useOnTime && !_useOffTime) return;
+    if (_repeat == 'Once' && _onceDate == null) return;
     final device = widget.valveState.devices[_selectedDeviceIndex];
     setState(() => _isLoading = true);
+
+    // If editing, delete the old plan first
+    if (widget.editPlan != null) {
+      await widget.ref.read(scheduleProvider.notifier).deletePlan(widget.editPlan);
+    }
+
     final error = await widget.ref.read(scheduleProvider.notifier).addSchedule(
           name: _nameController.text.trim(),
           deviceId: device.id,
@@ -195,6 +261,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
           offHour: _useOffTime ? _offTime.hour : null,
           offMinute: _useOffTime ? _offTime.minute : null,
           repeat: _repeat,
+          onceDate: _onceDate,
         );
     if (mounted) {
       if (error != null) {
@@ -226,7 +293,10 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title
-          Text(l10n.add, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            widget.editPlan != null ? l10n.edit : l10n.add,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
 
           // Name
@@ -311,8 +381,31 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
             value: _repeat,
             decoration: InputDecoration(labelText: l10n.repeat),
             items: _repeats.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-            onChanged: (v) => setState(() => _repeat = v!),
+            onChanged: (v) {
+              setState(() {
+                _repeat = v!;
+                if (_repeat == 'Once' && _onceDate == null) {
+                  _onceDate = DateTime.now();
+                }
+              });
+            },
           ),
+
+          // Date picker (only for Once)
+          if (_repeat == 'Once') ...[
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today, color: AppColors.primaryGreen),
+              title: Text(
+                _onceDate != null
+                    ? '${_onceDate!.year}-${_onceDate!.month.toString().padLeft(2, '0')}-${_onceDate!.day.toString().padLeft(2, '0')}'
+                    : 'Select date',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              onTap: _pickDate,
+            ),
+          ],
           const SizedBox(height: 20),
 
           // Save button
