@@ -70,12 +70,15 @@ class SchedulingScreen extends ConsumerWidget {
                           itemBuilder: (context, index) {
                             final plan = schedState.plans[index];
                             final valveName = '${l10n.valve} ${plan.pistonNumber}';
+                            final repeatDisplay = plan.repeatText == 'Custom'
+                                ? plan.rawDaysOfWeek.replaceAll('MON', 'Mo').replaceAll('TUE', 'Tu').replaceAll('WED', 'We').replaceAll('THU', 'Th').replaceAll('FRI', 'Fr').replaceAll('SAT', 'Sa').replaceAll('SUN', 'Su')
+                                : plan.repeatText;
                             return ScheduleCard(
                               name: plan.name,
                               valveName: valveName,
                               onTime: plan.onTime,
                               offTime: plan.offTime,
-                              repeatText: plan.repeatText,
+                              repeatText: repeatDisplay,
                               isEnabled: plan.enabled,
                               onToggle: (v) => ref.read(scheduleProvider.notifier).togglePlan(plan, v),
                               onEdit: () => _showEditDialog(context, ref, l10n, valveState, plan),
@@ -169,7 +172,11 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
   late bool _useOffTime;
   late String _repeat;
   DateTime? _onceDate;
+  late List<bool> _selectedDays; // Mon-Sun
   bool _isLoading = false;
+
+  static const _dayNames = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  static const _dayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
   @override
   void initState() {
@@ -184,6 +191,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
       _offTime = _useOffTime ? _parseTime(plan.offTime) : const TimeOfDay(hour: 20, minute: 0);
       _repeat = plan.repeatText.isEmpty ? 'Everyday' : plan.repeatText;
       _onceDate = _repeat == 'Once' ? DateTime.now() : null;
+      _selectedDays = _parseDays(plan.rawDaysOfWeek);
       // Find device index
       final devices = widget.valveState.devices;
       final idx = devices.indexWhere((d) => d.id == plan.deviceId);
@@ -196,6 +204,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
       _onTime = const TimeOfDay(hour: 8, minute: 0);
       _offTime = const TimeOfDay(hour: 20, minute: 0);
       _repeat = 'Everyday';
+      _selectedDays = List.filled(7, false);
     }
   }
 
@@ -208,7 +217,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
     }
   }
 
-  final _repeats = ['Everyday', 'Weekdays', 'Weekends', 'Once'];
+  final _repeats = ['Everyday', 'Custom', 'Once'];
 
   String _fmt(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
@@ -217,6 +226,21 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  List<bool> _parseDays(String rawDow) {
+    if (rawDow.isEmpty || rawDow == '*' || rawDow == '?') return List.filled(7, false);
+    // Handle range like MON-FRI
+    if (rawDow.contains('-') && !rawDow.contains(',')) {
+      final parts = rawDow.split('-');
+      final start = _dayNames.indexOf(parts[0]);
+      final end = _dayNames.indexOf(parts[1]);
+      if (start >= 0 && end >= 0) {
+        return List.generate(7, (i) => i >= start && i <= end);
+      }
+    }
+    final days = rawDow.split(',');
+    return List.generate(7, (i) => days.contains(_dayNames[i]));
   }
 
   Future<void> _pickDate() async {
@@ -244,7 +268,18 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
     if (_nameController.text.trim().isEmpty) return;
     if (!_useOnTime && !_useOffTime) return;
     if (_repeat == 'Once' && _onceDate == null) return;
+    if (_repeat == 'Custom' && !_selectedDays.contains(true)) return;
     final device = widget.valveState.devices[_selectedDeviceIndex];
+
+    String? customDays;
+    if (_repeat == 'Custom') {
+      final selected = <String>[];
+      for (int i = 0; i < 7; i++) {
+        if (_selectedDays[i]) selected.add(_dayNames[i]);
+      }
+      customDays = selected.join(',');
+    }
+
     setState(() => _isLoading = true);
 
     // If editing, delete the old plan first
@@ -262,6 +297,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
           offMinute: _useOffTime ? _offTime.minute : null,
           repeat: _repeat,
           onceDate: _onceDate,
+          customDays: customDays,
         );
     if (mounted) {
       if (error != null) {
@@ -390,6 +426,41 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
               });
             },
           ),
+
+          // Day selector (only for Custom)
+          if (_repeat == 'Custom') ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(7, (i) {
+                final selected = _selectedDays[i];
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedDays[i] = !_selectedDays[i]),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? AppColors.primaryGreen : Colors.transparent,
+                      border: Border.all(
+                        color: selected ? AppColors.primaryGreen : AppColors.grayDisabled,
+                        width: 1.5,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _dayLabels[i],
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: selected ? AppColors.white : AppColors.grayDisabled,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
 
           // Date picker (only for Once)
           if (_repeat == 'Once') ...[

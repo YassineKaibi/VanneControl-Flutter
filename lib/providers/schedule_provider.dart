@@ -63,11 +63,18 @@ class SchedulePlan {
     final cron = activateEntry?.cronExpression ?? deactivateEntry?.cronExpression ?? '';
     final parts = cron.split(' ');
     if (parts.length < 6) return '';
-    final dayOfWeek = parts.length > 5 ? parts[5] : '*';
-    if (dayOfWeek == '*' || dayOfWeek == '?') return 'Everyday';
-    if (dayOfWeek == 'MON-FRI' || dayOfWeek == 'MON,TUE,WED,THU,FRI' || dayOfWeek == '2-6') return 'Weekdays';
-    if (dayOfWeek == 'SAT,SUN' || dayOfWeek == '1,7' || dayOfWeek == '6,7') return 'Weekends';
-    return 'Once';
+    final dom = parts[3];
+    final dow = parts[5];
+    if (dow == '*' || (dom == '*' && dow == '?')) return 'Everyday';
+    if (dom != '*' && dom != '?') return 'Once';
+    return 'Custom';
+  }
+
+  String get rawDaysOfWeek {
+    final cron = activateEntry?.cronExpression ?? deactivateEntry?.cronExpression ?? '';
+    final parts = cron.split(' ');
+    if (parts.length < 6) return '';
+    return parts[5];
   }
 }
 
@@ -83,7 +90,7 @@ class ScheduleState {
   });
 }
 
-String buildCron(int hour, int minute, String repeat, {DateTime? onceDate}) {
+String buildCron(int hour, int minute, String repeat, {DateTime? onceDate, String? customDays}) {
   // Convert local time to UTC for server-side cron execution
   final baseDate = onceDate ?? DateTime.now();
   final local = DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
@@ -94,10 +101,8 @@ String buildCron(int hour, int minute, String repeat, {DateTime? onceDate}) {
   switch (repeat) {
     case 'Everyday':
       return '0 $m $h * * ?';
-    case 'Weekdays':
-      return '0 $m $h ? * MON,TUE,WED,THU,FRI';
-    case 'Weekends':
-      return '0 $m $h ? * SAT,SUN';
+    case 'Custom':
+      return '0 $m $h ? * ${customDays ?? 'MON'}';
     default: // Once
       return '0 $m $h ${utc.day} ${utc.month} ? ${utc.year}';
   }
@@ -151,6 +156,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
     required int? offMinute,
     required String repeat,
     DateTime? onceDate,
+    String? customDays,
   }) async {
     try {
       final futures = <Future>[];
@@ -160,7 +166,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
           'deviceId': deviceId,
           'pistonNumber': pistonNumber,
           'action': 'ACTIVATE',
-          'cronExpression': buildCron(onHour, onMinute, repeat, onceDate: onceDate),
+          'cronExpression': buildCron(onHour, onMinute, repeat, onceDate: onceDate, customDays: customDays),
           'enabled': true,
         }));
       }
@@ -170,7 +176,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
           'deviceId': deviceId,
           'pistonNumber': pistonNumber,
           'action': 'DEACTIVATE',
-          'cronExpression': buildCron(offHour, offMinute, repeat, onceDate: onceDate),
+          'cronExpression': buildCron(offHour, offMinute, repeat, onceDate: onceDate, customDays: customDays),
           'enabled': true,
         }));
       }
