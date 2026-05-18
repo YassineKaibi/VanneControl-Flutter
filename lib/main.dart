@@ -14,21 +14,24 @@ import 'screens/scheduling_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'services/token_manager.dart';
+import 'providers/locale_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const ProviderScope(child: VanneControlApp()));
 }
 
-class VanneControlApp extends StatelessWidget {
+class VanneControlApp extends ConsumerWidget {
   const VanneControlApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
     return MaterialApp(
       title: 'VanneControl',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -41,6 +44,7 @@ class VanneControlApp extends StatelessWidget {
       ],
       home: const _InitialRouteDecider(),
       routes: {
+        '/splash': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/dashboard': (context) => const DashboardScreen(),
@@ -58,14 +62,14 @@ class VanneControlApp extends StatelessWidget {
 /// Decides the initial route based on token check.
 /// If already logged in, go straight to dashboard.
 /// Otherwise, show the splash screen.
-class _InitialRouteDecider extends StatefulWidget {
+class _InitialRouteDecider extends ConsumerStatefulWidget {
   const _InitialRouteDecider();
 
   @override
-  State<_InitialRouteDecider> createState() => _InitialRouteDeciderState();
+  ConsumerState<_InitialRouteDecider> createState() => _InitialRouteDeciderState();
 }
 
-class _InitialRouteDeciderState extends State<_InitialRouteDecider> {
+class _InitialRouteDeciderState extends ConsumerState<_InitialRouteDecider> {
   bool _checking = true;
   bool _isLoggedIn = false;
 
@@ -76,6 +80,7 @@ class _InitialRouteDeciderState extends State<_InitialRouteDecider> {
   }
 
   Future<void> _checkAuth() async {
+    await ref.read(localeProvider.notifier).loadSavedLocale();
     final loggedIn = await TokenManager.getInstance().isLoggedIn();
     if (mounted) {
       setState(() {

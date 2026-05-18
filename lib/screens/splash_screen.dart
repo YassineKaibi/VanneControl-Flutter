@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../providers/locale_provider.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final currentLocale = ref.watch(localeProvider);
+    final isEn = currentLocale.languageCode == 'en';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -26,37 +30,38 @@ class SplashScreen extends StatelessWidget {
               padding: const EdgeInsets.only(top: 50, right: 20),
               child: Align(
                 alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => ref.read(localeProvider.notifier).setLocale(const Locale('en')),
+                      child: Text(
                         'EN',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.black,
+                          color: isEn ? AppColors.primaryGreen : AppColors.black,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        '|',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.separatorGray,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      '|',
+                      style: TextStyle(fontSize: 14, color: AppColors.separatorGray),
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () => ref.read(localeProvider.notifier).setLocale(const Locale('fr')),
+                      child: Text(
                         'FR',
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.separatorGray,
+                          fontWeight: FontWeight.bold,
+                          color: !isEn ? AppColors.primaryGreen : AppColors.black,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -86,7 +91,7 @@ class SplashScreen extends StatelessWidget {
               ),
             ),
 
-            // Logo placeholder area
+            // Logo
             Expanded(
               child: Center(
                 child: Padding(
@@ -106,12 +111,7 @@ class SplashScreen extends StatelessWidget {
 
             // Get Started button
             Padding(
-              padding: const EdgeInsets.only(
-                left: 30,
-                right: 30,
-                top: 43,
-                bottom: 24,
-              ),
+              padding: const EdgeInsets.only(left: 30, right: 30, top: 43, bottom: 24),
               child: SizedBox(
                 width: double.infinity,
                 height: 50,

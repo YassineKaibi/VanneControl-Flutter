@@ -37,7 +37,8 @@ class LoginNotifier extends StateNotifier<NetworkResult<AuthResponse>> {
 
     // On success, save token and user info (matches AuthRepository.kt)
     if (result is Success<AuthResponse>) {
-      await _tokenManager.saveToken(result.data.token);
+      final token = result.data.token;
+      if (token != null) await _tokenManager.saveToken(token);
       await _tokenManager.saveUserInfo(result.data.userId, email);
     }
 
@@ -94,7 +95,8 @@ class RegisterNotifier extends StateNotifier<NetworkResult<AuthResponse>> {
 
     // On success, save token and user info (matches AuthRepository.kt)
     if (result is Success<AuthResponse>) {
-      await _tokenManager.saveToken(result.data.token);
+      final token = result.data.token;
+      if (token != null) await _tokenManager.saveToken(token);
       await _tokenManager.saveUserInfo(result.data.userId, email);
     }
 
@@ -147,7 +149,7 @@ bool validateLogin({
   if (password.isEmpty) {
     passwordError.state = errorPasswordRequired;
     valid = false;
-  } else if (password.length < 6) {
+  } else if (password.length < 8) {
     passwordError.state = errorPasswordTooShort;
     valid = false;
   } else {

@@ -1,29 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/nav_card.dart';
 import '../widgets/active_valve_item.dart';
+import '../providers/valve_provider.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-
-    final activeValves = [
-      {'name': 'Valve 1', 'status': 'Active', 'time': '10:30 AM'},
-      {'name': 'Valve 3', 'status': 'Active', 'time': '10:30 AM'},
-      {'name': 'Valve 5', 'status': 'Active', 'time': '10:30 AM'},
-    ];
+    final valveState = ref.watch(valveProvider);
+    final activeValves = valveState.activeValves;
 
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
         child: Column(
           children: [
-            // Top bar with elevation
+            // Top bar
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -96,13 +94,30 @@ class DashboardScreen extends StatelessWidget {
                     // Active Valves title
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                      child: Text(
-                        l10n.activeValves,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.black,
-                        ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.activeValves,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.black,
+                              ),
+                            ),
+                          ),
+                          if (valveState.isLoading)
+                            const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          else
+                            GestureDetector(
+                              onTap: () => ref.read(valveProvider.notifier).refresh(),
+                              child: const Icon(Icons.refresh, size: 20, color: AppColors.primaryGreen),
+                            ),
+                        ],
                       ),
                     ),
 
@@ -116,26 +131,45 @@ class DashboardScreen extends StatelessWidget {
                         ),
                         child: SizedBox(
                           height: 150,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.all(12),
-                            itemCount: activeValves.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 8),
-                            itemBuilder: (context, index) {
-                              final valve = activeValves[index];
-                              return ActiveValveItem(
-                                name: valve['name']!,
-                                status: valve['status']!,
-                                time: valve['time']!,
-                              );
-                            },
-                          ),
+                          child: valveState.isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : valveState.error != null
+                                  ? Center(
+                                      child: Text(
+                                        valveState.error!,
+                                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    )
+                                  : activeValves.isEmpty
+                                      ? Center(
+                                          child: Text(
+                                            l10n.noActiveValves,
+                                            style: const TextStyle(
+                                              color: AppColors.placeholderGray,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        )
+                                      : ListView.separated(
+                                          scrollDirection: Axis.horizontal,
+                                          padding: const EdgeInsets.all(12),
+                                          itemCount: activeValves.length,
+                                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                                          itemBuilder: (context, index) {
+                                            final v = activeValves[index];
+                                            return ActiveValveItem(
+                                              name: '${l10n.valve} ${v.pistonNumber}',
+                                              status: l10n.active,
+                                              time: v.formattedTime,
+                                            );
+                                          },
+                                        ),
                         ),
                       ),
                     ),
 
-                    // Features / Control Modules title
+                    // Control Modules title
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                       child: Text(
@@ -155,8 +189,7 @@ class DashboardScreen extends StatelessWidget {
                         svgAsset: 'assets/icons/ic_water.svg',
                         title: l10n.valveManagement,
                         description: l10n.valveManagementDescription,
-                        onTap: () =>
-                            Navigator.pushNamed(context, '/valves'),
+                        onTap: () => Navigator.pushNamed(context, '/valves'),
                       ),
                     ),
                     Padding(
@@ -165,8 +198,7 @@ class DashboardScreen extends StatelessWidget {
                         svgAsset: 'assets/icons/timing_plan.svg',
                         title: l10n.timingPlan,
                         description: l10n.timingPlanDescription,
-                        onTap: () =>
-                            Navigator.pushNamed(context, '/scheduling'),
+                        onTap: () => Navigator.pushNamed(context, '/scheduling'),
                       ),
                     ),
                     Padding(
@@ -175,8 +207,7 @@ class DashboardScreen extends StatelessWidget {
                         svgAsset: 'assets/icons/ic_calendar.svg',
                         title: l10n.valveOperationHistory,
                         description: l10n.valveOperationHistoryDescription,
-                        onTap: () =>
-                            Navigator.pushNamed(context, '/history'),
+                        onTap: () => Navigator.pushNamed(context, '/history'),
                       ),
                     ),
                     Padding(
@@ -185,8 +216,7 @@ class DashboardScreen extends StatelessWidget {
                         svgAsset: 'assets/icons/ic_bar_chart.svg',
                         title: l10n.usageStatistics,
                         description: l10n.usageStatisticsDescription,
-                        onTap: () =>
-                            Navigator.pushNamed(context, '/statistics'),
+                        onTap: () => Navigator.pushNamed(context, '/statistics'),
                       ),
                     ),
                     Padding(

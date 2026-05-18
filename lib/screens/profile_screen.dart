@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../providers/auth_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -228,13 +229,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     child: Text(l10n.cancel),
                                   ),
                                   TextButton(
-                                    onPressed: () {
+                                    onPressed: () async {
                                       Navigator.pop(ctx);
-                                      Navigator.pushNamedAndRemoveUntil(
-                                        context,
-                                        '/login',
-                                        (route) => false,
-                                      );
+                                      await logout();
+                                      if (context.mounted) {
+                                        Navigator.pushNamedAndRemoveUntil(
+                                          context,
+                                          '/splash',
+                                          (route) => false,
+                                        );
+                                      }
                                     },
                                     child: Text(l10n.logout),
                                   ),

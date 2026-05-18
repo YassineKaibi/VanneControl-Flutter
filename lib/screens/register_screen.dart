@@ -94,14 +94,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         idle: () {},
         loading: () {},
         success: (data) {
-          // Toast + navigate to dashboard with clear stack
-          // (matches RegisterActivity.kt FLAG_NEW_TASK | FLAG_CLEAR_TASK)
+          final msg = data.message ?? l10n.registrationSuccess;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.registrationSuccess)),
+            SnackBar(content: Text(msg), duration: const Duration(seconds: 5)),
           );
           Navigator.pushNamedAndRemoveUntil(
             context,
-            '/dashboard',
+            '/login',
             (route) => false,
           );
         },
