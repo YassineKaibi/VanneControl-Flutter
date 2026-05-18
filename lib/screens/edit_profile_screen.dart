@@ -1,10 +1,80 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
-class EditProfileScreen extends StatelessWidget {
+class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
+
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  String? _avatarPath;
+  final _storage = const FlutterSecureStorage();
+  final _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  Future<void> _loadAvatar() async {
+    final path = await _storage.read(key: 'avatar_path');
+    if (path != null && File(path).existsSync()) {
+      setState(() => _avatarPath = path);
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picked = await _picker.pickImage(source: source, imageQuality: 80);
+    if (picked == null) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final dest = '${dir.path}/avatar.jpg';
+    await File(picked.path).copy(dest);
+    await _storage.write(key: 'avatar_path', value: dest);
+    if (mounted) setState(() => _avatarPath = dest);
+  }
+
+  void _showImageSourceSheet(AppLocalizations l10n) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primaryGreen),
+              title: Text(l10n.takePhoto),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.primaryGreen),
+              title: Text(l10n.chooseFromGallery),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,50 +155,61 @@ class EditProfileScreen extends StatelessWidget {
                         child: Center(
                           child: Column(
                             children: [
-                              Stack(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 50,
-                                    backgroundColor: AppColors.grey,
-                                    child: SvgPicture.asset(
-                                      'assets/icons/ic_avatar_placeholder.svg',
-                                      width: 60,
-                                      height: 60,
+                              GestureDetector(
+                                onTap: () => _showImageSourceSheet(l10n),
+                                child: Stack(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 50,
+                                      backgroundColor: AppColors.grey,
+                                      backgroundImage: _avatarPath != null
+                                          ? FileImage(File(_avatarPath!))
+                                          : null,
+                                      child: _avatarPath == null
+                                          ? SvgPicture.asset(
+                                              'assets/icons/ic_avatar_placeholder.svg',
+                                              width: 60,
+                                              height: 60,
+                                            )
+                                          : null,
                                     ),
-                                  ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.primaryGreen,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(7),
-                                        child: SvgPicture.asset(
-                                          'assets/icons/ic_camera.svg',
-                                          width: 18,
-                                          height: 18,
-                                          colorFilter: const ColorFilter.mode(
-                                            AppColors.white,
-                                            BlendMode.srcIn,
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Container(
+                                        width: 32,
+                                        height: 32,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.primaryGreen,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(7),
+                                          child: SvgPicture.asset(
+                                            'assets/icons/ic_camera.svg',
+                                            width: 18,
+                                            height: 18,
+                                            colorFilter: const ColorFilter.mode(
+                                              AppColors.white,
+                                              BlendMode.srcIn,
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 12),
-                              Text(
-                                l10n.changeProfilePhoto,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryGreen,
+                              GestureDetector(
+                                onTap: () => _showImageSourceSheet(l10n),
+                                child: Text(
+                                  l10n.changeProfilePhoto,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryGreen,
+                                  ),
                                 ),
                               ),
                             ],
@@ -161,8 +242,7 @@ class EditProfileScreen extends StatelessWidget {
                             const SizedBox(height: 16),
                             _buildTextField(l10n.lastName, 'Channa'),
                             const SizedBox(height: 16),
-                            _buildTextField(
-                                l10n.dateOfBirth, '01/01/1990'),
+                            _buildTextField(l10n.dateOfBirth, '01/01/1990'),
                           ],
                         ),
                       ),
@@ -194,11 +274,9 @@ class EditProfileScreen extends StatelessWidget {
                               enabled: false,
                             ),
                             const SizedBox(height: 16),
-                            _buildTextField(
-                                l10n.phone, '+212 600 000 000'),
+                            _buildTextField(l10n.phone, '+212 600 000 000'),
                             const SizedBox(height: 16),
-                            _buildTextField(
-                                l10n.location, 'Casablanca, Morocco'),
+                            _buildTextField(l10n.location, 'Casablanca, Morocco'),
                           ],
                         ),
                       ),
@@ -222,8 +300,11 @@ class EditProfileScreen extends StatelessWidget {
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
-                        child: _buildTextField(l10n.numberOfValves, '8',
-                            keyboardType: TextInputType.number),
+                        child: _buildTextField(
+                          l10n.numberOfValves,
+                          '8',
+                          keyboardType: TextInputType.number,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -251,22 +332,18 @@ class EditProfileScreen extends StatelessWidget {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
-          borderSide:
-              const BorderSide(color: AppColors.primaryGreen, width: 1),
+          borderSide: const BorderSide(color: AppColors.primaryGreen, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
-          borderSide:
-              const BorderSide(color: AppColors.primaryGreen, width: 2),
+          borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
-          borderSide:
-              const BorderSide(color: AppColors.grayDisabled, width: 1),
+          borderSide: const BorderSide(color: AppColors.grayDisabled, width: 1),
         ),
         floatingLabelBehavior: FloatingLabelBehavior.always,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       style: TextStyle(
         fontSize: 16,

@@ -2,8 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
@@ -19,7 +17,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedTab = 0;
   String? _avatarPath;
   final _storage = const FlutterSecureStorage();
-  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -32,50 +29,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (path != null && File(path).existsSync()) {
       setState(() => _avatarPath = path);
     }
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    final picked = await _picker.pickImage(source: source, imageQuality: 80);
-    if (picked == null) return;
-    final dir = await getApplicationDocumentsDirectory();
-    final dest = '${dir.path}/avatar.jpg';
-    await File(picked.path).copy(dest);
-    await _storage.write(key: 'avatar_path', value: dest);
-    if (mounted) setState(() => _avatarPath = dest);
-  }
-
-  void _showImageSourceSheet() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: AppColors.primaryGreen),
-              title: const Text('Prendre une photo'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: AppColors.primaryGreen),
-              title: const Text('Choisir depuis la galerie'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -121,8 +74,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () =>
-                        Navigator.pushNamed(context, '/edit-profile'),
+                    onTap: () => Navigator.pushNamed(context, '/edit-profile')
+                        .then((_) => _loadAvatar()),
                     child: Text(
                       l10n.editProfile,
                       style: const TextStyle(
@@ -152,48 +105,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Column(
                             children: [
                               // Avatar
-                              GestureDetector(
-                                onTap: _showImageSourceSheet,
-                                child: Stack(
-                                  children: [
-                                    Card(
-                                      elevation: 2,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(40),
-                                      ),
-                                      child: CircleAvatar(
-                                        radius: 40,
-                                        backgroundColor: AppColors.grey,
-                                        backgroundImage: _avatarPath != null
-                                            ? FileImage(File(_avatarPath!))
-                                            : null,
-                                        child: _avatarPath == null
-                                            ? SvgPicture.asset(
-                                                'assets/icons/ic_avatar_placeholder.svg',
-                                                width: 50,
-                                                height: 50,
-                                              )
-                                            : null,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      bottom: 0,
-                                      right: 0,
-                                      child: Container(
-                                        width: 26,
-                                        height: 26,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: AppColors.primaryGreen,
-                                        ),
-                                        child: const Icon(
-                                          Icons.camera_alt,
-                                          size: 14,
-                                          color: AppColors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                              Card(
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(40),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: AppColors.grey,
+                                  backgroundImage: _avatarPath != null
+                                      ? FileImage(File(_avatarPath!))
+                                      : null,
+                                  child: _avatarPath == null
+                                      ? SvgPicture.asset(
+                                          'assets/icons/ic_avatar_placeholder.svg',
+                                          width: 50,
+                                          height: 50,
+                                        )
+                                      : null,
                                 ),
                               ),
                               const SizedBox(height: 12),
