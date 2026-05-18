@@ -182,6 +182,7 @@
   "personalInformation": "Personal Information",
   "contactInformation": "Contact Information",
   "valveSettings": "Valve Settings",
+  "profileSaved": "Profile saved successfully",
   "numberOfValves": "Number of Valves (1-8)",
   "connected": "Connected",
   "disconnected": "Disconnected",

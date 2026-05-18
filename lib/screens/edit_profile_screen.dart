@@ -16,19 +16,75 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _avatarPath;
+  bool _isSaving = false;
   final _storage = const FlutterSecureStorage();
   final _picker = ImagePicker();
+
+  late final TextEditingController _firstNameCtrl;
+  late final TextEditingController _lastNameCtrl;
+  late final TextEditingController _dobCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _locationCtrl;
+  late final TextEditingController _valvesCtrl;
 
   @override
   void initState() {
     super.initState();
-    _loadAvatar();
+    _firstNameCtrl = TextEditingController();
+    _lastNameCtrl = TextEditingController();
+    _dobCtrl = TextEditingController();
+    _emailCtrl = TextEditingController();
+    _phoneCtrl = TextEditingController();
+    _locationCtrl = TextEditingController();
+    _valvesCtrl = TextEditingController();
+    _loadData();
   }
 
-  Future<void> _loadAvatar() async {
-    final path = await _storage.read(key: 'avatar_path');
-    if (path != null && File(path).existsSync()) {
-      setState(() => _avatarPath = path);
+  Future<void> _loadData() async {
+    final values = await Future.wait([
+      _storage.read(key: 'profile_avatar'),
+      _storage.read(key: 'profile_firstName'),
+      _storage.read(key: 'profile_lastName'),
+      _storage.read(key: 'profile_dob'),
+      _storage.read(key: 'profile_email'),
+      _storage.read(key: 'profile_phone'),
+      _storage.read(key: 'profile_location'),
+      _storage.read(key: 'profile_valves'),
+    ]);
+
+    final avatarPath = values[0];
+    setState(() {
+      if (avatarPath != null && File(avatarPath).existsSync()) {
+        _avatarPath = avatarPath;
+      }
+      _firstNameCtrl.text = values[1] ?? '';
+      _lastNameCtrl.text = values[2] ?? '';
+      _dobCtrl.text = values[3] ?? '';
+      _emailCtrl.text = values[4] ?? '';
+      _phoneCtrl.text = values[5] ?? '';
+      _locationCtrl.text = values[6] ?? '';
+      _valvesCtrl.text = values[7] ?? '8';
+    });
+  }
+
+  Future<void> _save(AppLocalizations l10n) async {
+    setState(() => _isSaving = true);
+    await Future.wait([
+      _storage.write(key: 'profile_firstName', value: _firstNameCtrl.text.trim()),
+      _storage.write(key: 'profile_lastName', value: _lastNameCtrl.text.trim()),
+      _storage.write(key: 'profile_dob', value: _dobCtrl.text.trim()),
+      _storage.write(key: 'profile_email', value: _emailCtrl.text.trim()),
+      _storage.write(key: 'profile_phone', value: _phoneCtrl.text.trim()),
+      _storage.write(key: 'profile_location', value: _locationCtrl.text.trim()),
+      _storage.write(key: 'profile_valves', value: _valvesCtrl.text.trim()),
+    ]);
+    if (mounted) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.profileSaved)),
+      );
+      Navigator.pop(context);
     }
   }
 
@@ -39,6 +95,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final dest = '${dir.path}/avatar.jpg';
     await File(picked.path).copy(dest);
     await _storage.write(key: 'avatar_path', value: dest);
+    await _storage.write(key: 'profile_avatar', value: dest);
     if (mounted) setState(() => _avatarPath = dest);
   }
 
@@ -77,6 +134,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _dobCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _locationCtrl.dispose();
+    _valvesCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
@@ -85,7 +154,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Custom top bar
+            // Top bar
             Container(
               padding: const EdgeInsets.all(16),
               color: AppColors.white,
@@ -100,10 +169,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         'assets/icons/arrow_back.svg',
                         width: 24,
                         height: 24,
-                        colorFilter: const ColorFilter.mode(
-                          AppColors.black,
-                          BlendMode.srcIn,
-                        ),
+                        colorFilter: const ColorFilter.mode(AppColors.black, BlendMode.srcIn),
                       ),
                     ),
                   ),
@@ -111,45 +177,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   Expanded(
                     child: Text(
                       l10n.editProfile,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.black,
-                      ),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.black),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.todoImplement)),
-                      );
-                    },
-                    child: Text(
-                      l10n.save,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryGreen,
-                      ),
-                    ),
-                  ),
+                  _isSaving
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : GestureDetector(
+                          onTap: () => _save(l10n),
+                          child: Text(
+                            l10n.save,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
+                          ),
+                        ),
                 ],
               ),
             ),
 
-            // Scrollable content
+            // Content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Profile photo card
+                    // Avatar card
                     Card(
                       elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: Padding(
                         padding: const EdgeInsets.all(20),
                         child: Center(
@@ -162,15 +216,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     CircleAvatar(
                                       radius: 50,
                                       backgroundColor: AppColors.grey,
-                                      backgroundImage: _avatarPath != null
-                                          ? FileImage(File(_avatarPath!))
-                                          : null,
+                                      backgroundImage: _avatarPath != null ? FileImage(File(_avatarPath!)) : null,
                                       child: _avatarPath == null
-                                          ? SvgPicture.asset(
-                                              'assets/icons/ic_avatar_placeholder.svg',
-                                              width: 60,
-                                              height: 60,
-                                            )
+                                          ? SvgPicture.asset('assets/icons/ic_avatar_placeholder.svg', width: 60, height: 60)
                                           : null,
                                     ),
                                     Positioned(
@@ -179,20 +227,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       child: Container(
                                         width: 32,
                                         height: 32,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.primaryGreen,
-                                          shape: BoxShape.circle,
-                                        ),
+                                        decoration: const BoxDecoration(color: AppColors.primaryGreen, shape: BoxShape.circle),
                                         child: Padding(
                                           padding: const EdgeInsets.all(7),
                                           child: SvgPicture.asset(
                                             'assets/icons/ic_camera.svg',
                                             width: 18,
                                             height: 18,
-                                            colorFilter: const ColorFilter.mode(
-                                              AppColors.white,
-                                              BlendMode.srcIn,
-                                            ),
+                                            colorFilter: const ColorFilter.mode(AppColors.white, BlendMode.srcIn),
                                           ),
                                         ),
                                       ),
@@ -205,11 +247,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 onTap: () => _showImageSourceSheet(l10n),
                                 child: Text(
                                   l10n.changeProfilePhoto,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryGreen,
-                                  ),
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
                                 ),
                               ),
                             ],
@@ -219,92 +257,57 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Personal Information section
-                    Text(
-                      l10n.personalInformation,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.black,
-                      ),
-                    ),
+                    // Personal Information
+                    Text(l10n.personalInformation, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.black)),
                     const SizedBox(height: 12),
                     Card(
                       elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            _buildTextField(l10n.firstName, 'Yassine'),
+                            _buildTextField(l10n.firstName, _firstNameCtrl),
                             const SizedBox(height: 16),
-                            _buildTextField(l10n.lastName, 'Channa'),
+                            _buildTextField(l10n.lastName, _lastNameCtrl),
                             const SizedBox(height: 16),
-                            _buildTextField(l10n.dateOfBirth, '01/01/1990'),
+                            _buildTextField(l10n.dateOfBirth, _dobCtrl),
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 20),
 
-                    // Contact Information section
-                    Text(
-                      l10n.contactInformation,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.black,
-                      ),
-                    ),
+                    // Contact Information
+                    Text(l10n.contactInformation, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.black)),
                     const SizedBox(height: 12),
                     Card(
                       elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            _buildTextField(
-                              l10n.email,
-                              'admin@vannecontrol.com',
-                              enabled: false,
-                            ),
+                            _buildTextField(l10n.email, _emailCtrl, enabled: false),
                             const SizedBox(height: 16),
-                            _buildTextField(l10n.phone, '+212 600 000 000'),
+                            _buildTextField(l10n.phone, _phoneCtrl, keyboardType: TextInputType.phone),
                             const SizedBox(height: 16),
-                            _buildTextField(l10n.location, 'Casablanca, Morocco'),
+                            _buildTextField(l10n.location, _locationCtrl),
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 20),
 
-                    // Valve Settings section
-                    Text(
-                      l10n.valveSettings,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.black,
-                      ),
-                    ),
+                    // Valve Settings
+                    Text(l10n.valveSettings, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.black)),
                     const SizedBox(height: 12),
                     Card(
                       elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
-                        child: _buildTextField(
-                          l10n.numberOfValves,
-                          '8',
-                          keyboardType: TextInputType.number,
-                        ),
+                        child: _buildTextField(l10n.numberOfValves, _valvesCtrl, keyboardType: TextInputType.number),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -318,18 +321,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildTextField(String label, String initialValue,
+  Widget _buildTextField(String label, TextEditingController controller,
       {bool enabled = true, TextInputType? keyboardType}) {
     return TextField(
-      controller: TextEditingController(text: initialValue),
+      controller: controller,
       enabled: enabled,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-          color: AppColors.primaryGreen,
-          fontSize: 16,
-        ),
+        labelStyle: const TextStyle(color: AppColors.primaryGreen, fontSize: 16),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
           borderSide: const BorderSide(color: AppColors.primaryGreen, width: 1),
@@ -345,10 +345,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         floatingLabelBehavior: FloatingLabelBehavior.always,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-      style: TextStyle(
-        fontSize: 16,
-        color: enabled ? AppColors.black : AppColors.grayIcon,
-      ),
+      style: TextStyle(fontSize: 16, color: enabled ? AppColors.black : AppColors.grayIcon),
     );
   }
 }

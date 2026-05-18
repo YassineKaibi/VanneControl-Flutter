@@ -16,19 +16,40 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedTab = 0;
   String? _avatarPath;
+  String _firstName = '';
+  String _lastName = '';
+  String _dob = '';
+  String _email = '';
+  String _phone = '';
+  String _location = '';
   final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
-    _loadAvatar();
+    _loadProfile();
   }
 
-  Future<void> _loadAvatar() async {
-    final path = await _storage.read(key: 'avatar_path');
-    if (path != null && File(path).existsSync()) {
-      setState(() => _avatarPath = path);
-    }
+  Future<void> _loadProfile() async {
+    final values = await Future.wait([
+      _storage.read(key: 'avatar_path'),
+      _storage.read(key: 'profile_firstName'),
+      _storage.read(key: 'profile_lastName'),
+      _storage.read(key: 'profile_dob'),
+      _storage.read(key: 'profile_email'),
+      _storage.read(key: 'profile_phone'),
+      _storage.read(key: 'profile_location'),
+    ]);
+    final avatarPath = values[0];
+    setState(() {
+      if (avatarPath != null && File(avatarPath).existsSync()) _avatarPath = avatarPath;
+      _firstName = values[1] ?? '';
+      _lastName = values[2] ?? '';
+      _dob = values[3] ?? '';
+      _email = values[4] ?? '';
+      _phone = values[5] ?? '';
+      _location = values[6] ?? '';
+    });
   }
 
   @override
@@ -75,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/edit-profile')
-                        .then((_) => _loadAvatar()),
+                        .then((_) => _loadProfile()),
                     child: Text(
                       l10n.editProfile,
                       style: const TextStyle(
@@ -126,18 +147,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              const Text(
-                                'Yassine Channa',
-                                style: TextStyle(
+                              Text(
+                                '${_firstName} ${_lastName}'.trim().isEmpty ? '—' : '${_firstName} ${_lastName}'.trim(),
+                                style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.black,
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
-                                'admin@vannecontrol.com',
-                                style: TextStyle(
+                              Text(
+                                _email.isEmpty ? '—' : _email,
+                                style: const TextStyle(
                                   fontSize: 14,
                                   color: AppColors.descriptionGray,
                                 ),
@@ -299,16 +320,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          _buildProfileRow('assets/icons/account_circle.svg', l10n.firstName, 'Yassine'),
-          _buildProfileRow('assets/icons/account_circle.svg', l10n.lastName, 'Channa'),
-          _buildProfileRow(
-              'assets/icons/ic_calendar.svg', l10n.dateOfBirth, '01/01/1990'),
-          _buildProfileRow(
-              'assets/icons/ic_email.svg', l10n.email, 'admin@vannecontrol.com'),
-          _buildProfileRow('assets/icons/ic_phone.svg', l10n.phone, '+212 600 000 000'),
-          _buildProfileRow(
-              'assets/icons/ic_location.svg', l10n.location, 'Casablanca, Morocco',
-              showDivider: false),
+          _buildProfileRow('assets/icons/account_circle.svg', l10n.firstName, _firstName.isEmpty ? '—' : _firstName),
+          _buildProfileRow('assets/icons/account_circle.svg', l10n.lastName, _lastName.isEmpty ? '—' : _lastName),
+          _buildProfileRow('assets/icons/ic_calendar.svg', l10n.dateOfBirth, _dob.isEmpty ? '—' : _dob),
+          _buildProfileRow('assets/icons/ic_email.svg', l10n.email, _email.isEmpty ? '—' : _email),
+          _buildProfileRow('assets/icons/ic_phone.svg', l10n.phone, _phone.isEmpty ? '—' : _phone),
+          _buildProfileRow('assets/icons/ic_location.svg', l10n.location, _location.isEmpty ? '—' : _location, showDivider: false),
         ],
       ),
     );

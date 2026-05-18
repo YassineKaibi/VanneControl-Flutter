@@ -165,6 +165,7 @@
   "personalInformation": "Informations personnelles",
   "contactInformation": "Coordonnées",
   "valveSettings": "Paramètres des vannes",
+  "profileSaved": "Profil enregistré avec succès",
   "numberOfValves": "Nombre de vannes (1-8)",
   "connected": "Connecté",
   "disconnected": "Déconnecté",
