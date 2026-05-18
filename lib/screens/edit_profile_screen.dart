@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import '../services/token_manager.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -42,29 +43,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadData() async {
-    final values = await Future.wait([
-      _storage.read(key: 'profile_avatar'),
+    final tokenManager = TokenManager.getInstance();
+    final results = await Future.wait([
+      _storage.read(key: 'avatar_path'),
       _storage.read(key: 'profile_firstName'),
       _storage.read(key: 'profile_lastName'),
       _storage.read(key: 'profile_dob'),
-      _storage.read(key: 'profile_email'),
       _storage.read(key: 'profile_phone'),
       _storage.read(key: 'profile_location'),
       _storage.read(key: 'profile_valves'),
+      tokenManager.getUserEmail(),
     ]);
 
-    final avatarPath = values[0];
+    final avatarPath = results[0];
     setState(() {
-      if (avatarPath != null && File(avatarPath).existsSync()) {
-        _avatarPath = avatarPath;
-      }
-      _firstNameCtrl.text = values[1] ?? '';
-      _lastNameCtrl.text = values[2] ?? '';
-      _dobCtrl.text = values[3] ?? '';
-      _emailCtrl.text = values[4] ?? '';
-      _phoneCtrl.text = values[5] ?? '';
-      _locationCtrl.text = values[6] ?? '';
-      _valvesCtrl.text = values[7] ?? '8';
+      if (avatarPath != null && File(avatarPath).existsSync()) _avatarPath = avatarPath;
+      _firstNameCtrl.text = results[1] ?? '';
+      _lastNameCtrl.text = results[2] ?? '';
+      _dobCtrl.text = results[3] ?? '';
+      _phoneCtrl.text = results[4] ?? '';
+      _locationCtrl.text = results[5] ?? '';
+      _valvesCtrl.text = results[6] ?? '8';
+      _emailCtrl.text = results[7] ?? '';
     });
   }
 
@@ -74,7 +74,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _storage.write(key: 'profile_firstName', value: _firstNameCtrl.text.trim()),
       _storage.write(key: 'profile_lastName', value: _lastNameCtrl.text.trim()),
       _storage.write(key: 'profile_dob', value: _dobCtrl.text.trim()),
-      _storage.write(key: 'profile_email', value: _emailCtrl.text.trim()),
       _storage.write(key: 'profile_phone', value: _phoneCtrl.text.trim()),
       _storage.write(key: 'profile_location', value: _locationCtrl.text.trim()),
       _storage.write(key: 'profile_valves', value: _valvesCtrl.text.trim()),

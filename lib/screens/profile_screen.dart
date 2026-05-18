@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../services/token_manager.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,24 +32,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
-    final values = await Future.wait([
+    final tokenManager = TokenManager.getInstance();
+    final results = await Future.wait([
       _storage.read(key: 'avatar_path'),
       _storage.read(key: 'profile_firstName'),
       _storage.read(key: 'profile_lastName'),
       _storage.read(key: 'profile_dob'),
-      _storage.read(key: 'profile_email'),
       _storage.read(key: 'profile_phone'),
       _storage.read(key: 'profile_location'),
+      tokenManager.getUserEmail(),
     ]);
-    final avatarPath = values[0];
+    final avatarPath = results[0];
     setState(() {
       if (avatarPath != null && File(avatarPath).existsSync()) _avatarPath = avatarPath;
-      _firstName = values[1] ?? '';
-      _lastName = values[2] ?? '';
-      _dob = values[3] ?? '';
-      _email = values[4] ?? '';
-      _phone = values[5] ?? '';
-      _location = values[6] ?? '';
+      _firstName = results[1] ?? '';
+      _lastName = results[2] ?? '';
+      _dob = results[3] ?? '';
+      _phone = results[4] ?? '';
+      _location = results[5] ?? '';
+      _email = results[6] ?? '';
     });
   }
 
