@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_holo_date_picker/flutter_holo_date_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
@@ -75,20 +76,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _showDatePicker(AppLocalizations l10n) async {
     final initial = _parseStoredDob();
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await DatePicker.showSimpleDatePicker(
+      context,
       initialDate: initial,
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: AppColors.primaryGreen,
-            onPrimary: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
+      dateFormat: "dd-MMMM-yyyy",
+      locale: DateTimePickerLocale.fr,
+      looping: false,
+      titleText: l10n.dateOfBirth,
+      confirmText: l10n.save,
+      cancelText: l10n.cancel,
     );
     if (picked != null) {
       final d = picked.day.toString().padLeft(2, '0');
