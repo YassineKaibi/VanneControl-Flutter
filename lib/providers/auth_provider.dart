@@ -1,9 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_client.dart';
 import '../services/token_manager.dart';
 import '../services/network_result.dart';
 import '../models/api_requests.dart';
 import '../models/api_responses.dart';
+
+const _profileStorage = FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+);
 
 /// AuthState - Combines login and register state into one provider.
 /// Replaces LoginViewModel + RegisterViewModel from the Android project.
@@ -93,11 +98,16 @@ class RegisterNotifier extends StateNotifier<NetworkResult<AuthResponse>> {
       (data) => AuthResponse.fromJson(data as Map<String, dynamic>),
     );
 
-    // On success, save token and user info (matches AuthRepository.kt)
+    // On success, save token, user info and profile data
     if (result is Success<AuthResponse>) {
       final token = result.data.token;
       if (token != null) await _tokenManager.saveToken(token);
       await _tokenManager.saveUserInfo(result.data.userId, email);
+      await Future.wait([
+        _profileStorage.write(key: 'profile_firstName', value: firstName),
+        _profileStorage.write(key: 'profile_lastName', value: lastName),
+        _profileStorage.write(key: 'profile_phone', value: phoneNumber),
+      ]);
     }
 
     state = result;
