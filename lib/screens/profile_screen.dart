@@ -23,7 +23,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _email = '';
   String _phone = '';
   String _location = '';
-  final _storage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   @override
   void initState() {

@@ -18,7 +18,9 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _avatarPath;
   bool _isSaving = false;
-  final _storage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
   final _picker = ImagePicker();
 
   late final TextEditingController _firstNameCtrl;
