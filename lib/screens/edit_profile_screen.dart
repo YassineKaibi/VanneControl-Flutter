@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -74,64 +73,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return DateTime(2000);
   }
 
-  void _showDatePicker(AppLocalizations l10n) {
+  Future<void> _showDatePicker(AppLocalizations l10n) async {
     final initial = _parseStoredDob();
-    DateTime selected = initial;
-
-    showModalBottomSheet(
+    final picked = await showDatePicker(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SizedBox(
-        height: 320,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      l10n.cancel,
-                      style: const TextStyle(color: AppColors.grayIcon),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      final d = selected.day.toString().padLeft(2, '0');
-                      final m = selected.month.toString().padLeft(2, '0');
-                      setState(() => _dobCtrl.text = '$d/$m/${selected.year}');
-                      Navigator.pop(ctx);
-                    },
-                    child: Text(
-                      l10n.save,
-                      style: const TextStyle(
-                        color: AppColors.primaryGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: CupertinoDatePicker(
-                mode: CupertinoDatePickerMode.date,
-                initialDateTime: initial,
-                maximumDate: DateTime.now(),
-                minimumYear: 1900,
-                maximumYear: DateTime.now().year,
-                onDateTimeChanged: (dt) => selected = dt,
-              ),
-            ),
-          ],
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.primaryGreen,
+            onPrimary: Colors.white,
+          ),
         ),
+        child: child!,
       ),
     );
+    if (picked != null) {
+      final d = picked.day.toString().padLeft(2, '0');
+      final m = picked.month.toString().padLeft(2, '0');
+      setState(() => _dobCtrl.text = '$d/$m/${picked.year}');
+    }
   }
 
   Future<void> _save(AppLocalizations l10n) async {
