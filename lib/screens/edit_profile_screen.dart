@@ -1,26 +1,25 @@
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
-import '../services/token_manager.dart';
+import '../providers/profile_provider.dart';
 
-class EditProfileScreen extends StatefulWidget {
+class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   String? _avatarPath;
   bool _isSaving = false;
-  final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  bool _populated = false;
   final _picker = ImagePicker();
 
   late final TextEditingController _firstNameCtrl;
@@ -41,45 +40,110 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneCtrl = TextEditingController();
     _locationCtrl = TextEditingController();
     _valvesCtrl = TextEditingController();
-    _loadData();
+
+    final profile = ref.read(profileProvider).valueOrNull;
+    if (profile != null) {
+      _populated = true;
+      _populate(profile);
+    }
   }
 
-  Future<void> _loadData() async {
-    final tokenManager = TokenManager.getInstance();
-    final results = await Future.wait([
-      _storage.read(key: 'avatar_path'),
-      _storage.read(key: 'profile_firstName'),
-      _storage.read(key: 'profile_lastName'),
-      _storage.read(key: 'profile_dob'),
-      _storage.read(key: 'profile_phone'),
-      _storage.read(key: 'profile_location'),
-      _storage.read(key: 'profile_valves'),
-      tokenManager.getUserEmail(),
-    ]);
+  void _populate(ProfileData profile) {
+    if (profile.avatarPath != null) _avatarPath = profile.avatarPath;
+    _firstNameCtrl.text = profile.firstName;
+    _lastNameCtrl.text = profile.lastName;
+    _dobCtrl.text = profile.dob;
+    _emailCtrl.text = profile.email;
+    _phoneCtrl.text = profile.phone;
+    _locationCtrl.text = profile.location;
+    _valvesCtrl.text = profile.valves;
+  }
 
-    final avatarPath = results[0];
-    setState(() {
-      if (avatarPath != null && File(avatarPath).existsSync()) _avatarPath = avatarPath;
-      _firstNameCtrl.text = results[1] ?? '';
-      _lastNameCtrl.text = results[2] ?? '';
-      _dobCtrl.text = results[3] ?? '';
-      _phoneCtrl.text = results[4] ?? '';
-      _locationCtrl.text = results[5] ?? '';
-      _valvesCtrl.text = results[6] ?? '8';
-      _emailCtrl.text = results[7] ?? '';
-    });
+  DateTime _parseStoredDob() {
+    if (_dobCtrl.text.isEmpty) return DateTime(2000);
+    try {
+      final parts = _dobCtrl.text.split('/');
+      if (parts.length == 3) {
+        return DateTime(
+          int.parse(parts[2]),
+          int.parse(parts[1]),
+          int.parse(parts[0]),
+        );
+      }
+    } catch (_) {}
+    return DateTime(2000);
+  }
+
+  void _showDatePicker(AppLocalizations l10n) {
+    final initial = _parseStoredDob();
+    DateTime selected = initial;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SizedBox(
+        height: 320,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(
+                      l10n.cancel,
+                      style: const TextStyle(color: AppColors.grayIcon),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final d = selected.day.toString().padLeft(2, '0');
+                      final m = selected.month.toString().padLeft(2, '0');
+                      setState(() => _dobCtrl.text = '$d/$m/${selected.year}');
+                      Navigator.pop(ctx);
+                    },
+                    child: Text(
+                      l10n.save,
+                      style: const TextStyle(
+                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: initial,
+                maximumDate: DateTime.now(),
+                minimumYear: 1900,
+                maximumYear: DateTime.now().year,
+                onDateTimeChanged: (dt) => selected = dt,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _save(AppLocalizations l10n) async {
     setState(() => _isSaving = true);
-    await Future.wait([
-      _storage.write(key: 'profile_firstName', value: _firstNameCtrl.text.trim()),
-      _storage.write(key: 'profile_lastName', value: _lastNameCtrl.text.trim()),
-      _storage.write(key: 'profile_dob', value: _dobCtrl.text.trim()),
-      _storage.write(key: 'profile_phone', value: _phoneCtrl.text.trim()),
-      _storage.write(key: 'profile_location', value: _locationCtrl.text.trim()),
-      _storage.write(key: 'profile_valves', value: _valvesCtrl.text.trim()),
-    ]);
+    await ref.read(profileProvider.notifier).save(
+      firstName: _firstNameCtrl.text.trim(),
+      lastName: _lastNameCtrl.text.trim(),
+      dob: _dobCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim(),
+      location: _locationCtrl.text.trim(),
+      valves: _valvesCtrl.text.trim(),
+    );
     if (mounted) {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,8 +159,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final dir = await getApplicationDocumentsDirectory();
     final dest = '${dir.path}/avatar.jpg';
     await File(picked.path).copy(dest);
-    await _storage.write(key: 'avatar_path', value: dest);
-    await _storage.write(key: 'profile_avatar', value: dest);
+    await ref.read(profileProvider.notifier).save(avatarPath: dest);
     if (mounted) setState(() => _avatarPath = dest);
   }
 
@@ -148,6 +211,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Populate fields if provider loaded after initState
+    ref.listen<AsyncValue<ProfileData>>(profileProvider, (prev, next) {
+      if (!_populated && next.hasValue) {
+        _populated = true;
+        setState(() => _populate(next.value!));
+      }
+    });
+
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -272,7 +343,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             const SizedBox(height: 16),
                             _buildTextField(l10n.lastName, _lastNameCtrl),
                             const SizedBox(height: 16),
-                            _buildTextField(l10n.dateOfBirth, _dobCtrl),
+                            // Date of Birth — tap to open picker
+                            GestureDetector(
+                              onTap: () => _showDatePicker(l10n),
+                              child: AbsorbPointer(
+                                child: _buildTextField(
+                                  l10n.dateOfBirth,
+                                  _dobCtrl,
+                                  suffixIcon: const Icon(
+                                    Icons.calendar_today,
+                                    size: 18,
+                                    color: AppColors.primaryGreen,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -322,8 +407,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {bool enabled = true, TextInputType? keyboardType}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool enabled = true,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
+  }) {
     return TextField(
       controller: controller,
       enabled: enabled,
@@ -331,6 +421,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: AppColors.primaryGreen, fontSize: 16),
+        suffixIcon: suffixIcon,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
           borderSide: const BorderSide(color: AppColors.primaryGreen, width: 1),

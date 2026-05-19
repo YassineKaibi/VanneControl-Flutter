@@ -1,64 +1,26 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
-import '../services/token_manager.dart';
+import '../providers/profile_provider.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   int _selectedTab = 0;
-  String? _avatarPath;
-  String _firstName = '';
-  String _lastName = '';
-  String _dob = '';
-  String _email = '';
-  String _phone = '';
-  String _location = '';
-  final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
-  }
-
-  Future<void> _loadProfile() async {
-    final tokenManager = TokenManager.getInstance();
-    final results = await Future.wait([
-      _storage.read(key: 'avatar_path'),
-      _storage.read(key: 'profile_firstName'),
-      _storage.read(key: 'profile_lastName'),
-      _storage.read(key: 'profile_dob'),
-      _storage.read(key: 'profile_phone'),
-      _storage.read(key: 'profile_location'),
-      tokenManager.getUserEmail(),
-    ]);
-    final avatarPath = results[0];
-    setState(() {
-      if (avatarPath != null && File(avatarPath).existsSync()) _avatarPath = avatarPath;
-      _firstName = results[1] ?? '';
-      _lastName = results[2] ?? '';
-      _dob = results[3] ?? '';
-      _phone = results[4] ?? '';
-      _location = results[5] ?? '';
-      _email = results[6] ?? '';
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final profile = ref.watch(profileProvider).valueOrNull ?? const ProfileData();
 
     return Scaffold(
       backgroundColor: AppColors.lightGrayBg,
@@ -99,8 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/edit-profile')
-                        .then((_) => _loadProfile()),
+                    onTap: () => Navigator.pushNamed(context, '/edit-profile'),
                     child: Text(
                       l10n.editProfile,
                       style: const TextStyle(
@@ -129,7 +90,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             children: [
-                              // Avatar
                               Card(
                                 elevation: 2,
                                 shape: RoundedRectangleBorder(
@@ -138,10 +98,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: CircleAvatar(
                                   radius: 40,
                                   backgroundColor: AppColors.grey,
-                                  backgroundImage: _avatarPath != null
-                                      ? FileImage(File(_avatarPath!))
+                                  backgroundImage: profile.avatarPath != null
+                                      ? FileImage(File(profile.avatarPath!))
                                       : null,
-                                  child: _avatarPath == null
+                                  child: profile.avatarPath == null
                                       ? SvgPicture.asset(
                                           'assets/icons/ic_avatar_placeholder.svg',
                                           width: 50,
@@ -152,7 +112,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                '${_firstName} ${_lastName}'.trim().isEmpty ? '—' : '${_firstName} ${_lastName}'.trim(),
+                                '${profile.firstName} ${profile.lastName}'.trim().isEmpty
+                                    ? '—'
+                                    : '${profile.firstName} ${profile.lastName}'.trim(),
                                 style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -161,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                _email.isEmpty ? '—' : _email,
+                                profile.email.isEmpty ? '—' : profile.email,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: AppColors.descriptionGray,
@@ -181,8 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _selectedTab = 0),
+                              onTap: () => setState(() => _selectedTab = 0),
                               child: Container(
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
@@ -213,8 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _selectedTab = 1),
+                              onTap: () => setState(() => _selectedTab = 1),
                               child: Container(
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
@@ -248,19 +208,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
 
                     // Tab content
-                    if (_selectedTab == 0) _buildPersonalInfo(l10n),
-                    if (_selectedTab == 1) _buildSystemInfo(l10n),
+                    if (_selectedTab == 0) _buildPersonalInfo(l10n, profile),
+                    if (_selectedTab == 1) _buildSystemInfo(l10n, profile),
 
-                    // Spacer
-                    Container(
-                      height: 32,
-                      color: AppColors.lightGrayBg,
-                    ),
+                    Container(height: 32, color: AppColors.lightGrayBg),
 
                     // Logout button
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
@@ -294,8 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                           style: OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           child: Text(
                             l10n.logout,
@@ -318,18 +272,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPersonalInfo(AppLocalizations l10n) {
+  Widget _buildPersonalInfo(AppLocalizations l10n, ProfileData profile) {
     return Container(
       color: AppColors.white,
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          _buildProfileRow('assets/icons/account_circle.svg', l10n.firstName, _firstName.isEmpty ? '—' : _firstName),
-          _buildProfileRow('assets/icons/account_circle.svg', l10n.lastName, _lastName.isEmpty ? '—' : _lastName),
-          _buildProfileRow('assets/icons/ic_calendar.svg', l10n.dateOfBirth, _dob.isEmpty ? '—' : _dob),
-          _buildProfileRow('assets/icons/ic_email.svg', l10n.email, _email.isEmpty ? '—' : _email),
-          _buildProfileRow('assets/icons/ic_phone.svg', l10n.phone, _phone.isEmpty ? '—' : _phone),
-          _buildProfileRow('assets/icons/ic_location.svg', l10n.location, _location.isEmpty ? '—' : _location, showDivider: false),
+          _buildProfileRow('assets/icons/account_circle.svg', l10n.firstName, profile.firstName.isEmpty ? '—' : profile.firstName),
+          _buildProfileRow('assets/icons/account_circle.svg', l10n.lastName, profile.lastName.isEmpty ? '—' : profile.lastName),
+          _buildProfileRow('assets/icons/ic_calendar.svg', l10n.dateOfBirth, profile.dob.isEmpty ? '—' : profile.dob),
+          _buildProfileRow('assets/icons/ic_email.svg', l10n.email, profile.email.isEmpty ? '—' : profile.email),
+          _buildProfileRow('assets/icons/ic_phone.svg', l10n.phone, profile.phone.isEmpty ? '—' : profile.phone),
+          _buildProfileRow('assets/icons/ic_location.svg', l10n.location, profile.location.isEmpty ? '—' : profile.location, showDivider: false),
         ],
       ),
     );
@@ -379,16 +333,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (showDivider)
           Padding(
             padding: const EdgeInsets.only(left: 40, top: 12, bottom: 12),
-            child: const Divider(
-              height: 1,
-              color: AppColors.divider,
-            ),
+            child: const Divider(height: 1, color: AppColors.divider),
           ),
       ],
     );
   }
 
-  Widget _buildSystemInfo(AppLocalizations l10n) {
+  Widget _buildSystemInfo(AppLocalizations l10n, ProfileData profile) {
+    final valveCount = int.tryParse(profile.valves) ?? 8;
     return Container(
       color: AppColors.white,
       padding: const EdgeInsets.all(20),
@@ -405,7 +357,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(width: 16),
           Text(
-            l10n.valvesToManage(8),
+            l10n.valvesToManage(valveCount),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

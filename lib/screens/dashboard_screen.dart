@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -6,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/nav_card.dart';
 import '../widgets/active_valve_item.dart';
 import '../providers/valve_provider.dart';
+import '../providers/profile_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -15,6 +17,7 @@ class DashboardScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final valveState = ref.watch(valveProvider);
     final activeValves = valveState.activeValves;
+    final avatarPath = ref.watch(profileProvider).valueOrNull?.avatarPath;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -62,22 +65,23 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/profile'),
-                    child: SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: CircleAvatar(
-                        radius: 40,
-                        backgroundColor: AppColors.grey,
-                        child: SvgPicture.asset(
-                          'assets/icons/account_circle.svg',
-                          width: 80,
-                          height: 80,
-                          colorFilter: const ColorFilter.mode(
-                            AppColors.grayIcon,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      ),
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: AppColors.grey,
+                      backgroundImage: avatarPath != null
+                          ? FileImage(File(avatarPath))
+                          : null,
+                      child: avatarPath == null
+                          ? SvgPicture.asset(
+                              'assets/icons/account_circle.svg',
+                              width: 80,
+                              height: 80,
+                              colorFilter: const ColorFilter.mode(
+                                AppColors.grayIcon,
+                                BlendMode.srcIn,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                 ],
