@@ -14,16 +14,123 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   bool _showFilter = false;
 
-  final List<Map<String, String>> _historyItems = [
+  final Set<int> _selectedValves = {};
+  bool _filterOpenings = false;
+  bool _filterClosings = false;
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  final List<Map<String, String>> _allItems = [
     {'valve': 'Valve 1', 'action': 'Opened', 'time': '21/10/2025 14:30', 'user': 'Admin'},
-    {'valve': 'Valve 3', 'action': 'Closed', 'time': '21/10/2025 13:10', 'user': 'Admin'},
+    {'valve': 'Valve 3', 'action': 'Closed',  'time': '21/10/2025 13:10', 'user': 'Admin'},
     {'valve': 'Valve 2', 'action': 'Opened', 'time': '21/10/2025 11:45', 'user': 'Admin'},
-    {'valve': 'Valve 1', 'action': 'Closed', 'time': '20/10/2025 18:20', 'user': 'Admin'},
+    {'valve': 'Valve 1', 'action': 'Closed',  'time': '20/10/2025 18:20', 'user': 'Admin'},
     {'valve': 'Valve 5', 'action': 'Opened', 'time': '20/10/2025 16:00', 'user': 'Admin'},
     {'valve': 'Valve 3', 'action': 'Opened', 'time': '20/10/2025 09:15', 'user': 'Admin'},
-    {'valve': 'Valve 2', 'action': 'Closed', 'time': '19/10/2025 22:30', 'user': 'Admin'},
+    {'valve': 'Valve 2', 'action': 'Closed',  'time': '19/10/2025 22:30', 'user': 'Admin'},
     {'valve': 'Valve 4', 'action': 'Opened', 'time': '19/10/2025 14:00', 'user': 'Admin'},
   ];
+
+  List<Map<String, String>> _filteredItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredItems = List.from(_allItems);
+  }
+
+  DateTime? _parseDate(String timeStr) {
+    try {
+      final parts = timeStr.split(' ');
+      final dateParts = parts[0].split('/');
+      final timeParts = parts[1].split(':');
+      return DateTime(
+        int.parse(dateParts[2]),
+        int.parse(dateParts[1]),
+        int.parse(dateParts[0]),
+        int.parse(timeParts[0]),
+        int.parse(timeParts[1]),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _applyFilters() {
+    setState(() {
+      _filteredItems = _allItems.where((item) {
+        // Valve filter
+        if (_selectedValves.isNotEmpty) {
+          final valveNum = int.tryParse(item['valve']!.replaceAll('Valve ', ''));
+          if (valveNum == null || !_selectedValves.contains(valveNum)) return false;
+        }
+
+        // Action type filter
+        if (_filterOpenings && !_filterClosings) {
+          if (item['action'] != 'Opened') return false;
+        } else if (_filterClosings && !_filterOpenings) {
+          if (item['action'] != 'Closed') return false;
+        }
+
+        // Date range filter
+        if (_startDate != null || _endDate != null) {
+          final itemDate = _parseDate(item['time']!);
+          if (itemDate == null) return false;
+          if (_startDate != null && itemDate.isBefore(_startDate!)) return false;
+          if (_endDate != null) {
+            final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+            if (itemDate.isAfter(endOfDay)) return false;
+          }
+        }
+
+        return true;
+      }).toList();
+
+      _showFilter = false;
+    });
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _selectedValves.clear();
+      _filterOpenings = false;
+      _filterClosings = false;
+      _startDate = null;
+      _endDate = null;
+      _filteredItems = List.from(_allItems);
+    });
+  }
+
+  Future<void> _pickDate(BuildContext context, {required bool isStart}) async {
+    final initial = isStart
+        ? (_startDate ?? DateTime.now())
+        : (_endDate ?? DateTime.now());
+    final picked = await showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CompactCalendar(initialDate: initial),
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _startDate = picked;
+        } else {
+          _endDate = picked;
+        }
+      });
+    }
+  }
+
+  String _formatDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  bool get _hasActiveFilters =>
+      _selectedValves.isNotEmpty ||
+      _filterOpenings ||
+      _filterClosings ||
+      _startDate != null ||
+      _endDate != null;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +142,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Custom top bar
+            // Top bar
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -83,18 +190,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         _showFilter = !_showFilter;
                       });
                     },
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: SvgPicture.asset(
-                        'assets/icons/tune.svg',
-                        width: 24,
-                        height: 24,
-                        colorFilter: const ColorFilter.mode(
-                          AppColors.black,
-                          BlendMode.srcIn,
+                    child: Stack(
+                      children: [
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: SvgPicture.asset(
+                            'assets/icons/tune.svg',
+                            width: 24,
+                            height: 24,
+                            colorFilter: ColorFilter.mode(
+                              _hasActiveFilters ? AppColors.primaryGreen : AppColors.black,
+                              BlendMode.srcIn,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (_hasActiveFilters)
+                          Positioned(
+                            right: 4,
+                            top: 4,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryGreen,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -105,7 +229,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 12, left: 16),
               child: Text(
-                l10n.resultCount(_historyItems.length, _historyItems.length),
+                l10n.resultCount(_filteredItems.length, _allItems.length),
                 style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.descriptionGray,
@@ -113,7 +237,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ),
 
-            // Filter panel (togglable)
+            // Filter panel
             if (_showFilter)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -136,7 +260,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        // Valve selection chips
                         Text(
                           l10n.selectValves,
                           style: const TextStyle(
@@ -149,15 +272,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         Wrap(
                           spacing: 8,
                           children: List.generate(8, (i) {
+                            final valveNum = i + 1;
                             return FilterChip(
-                              label: Text('${l10n.valve} ${i + 1}'),
-                              selected: false,
-                              onSelected: (_) {},
+                              label: Text('${l10n.valve} $valveNum'),
+                              selected: _selectedValves.contains(valveNum),
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _selectedValves.add(valveNum);
+                                  } else {
+                                    _selectedValves.remove(valveNum);
+                                  }
+                                });
+                              },
                             );
                           }),
                         ),
                         const SizedBox(height: 12),
-                        // Action type
                         Text(
                           l10n.actionType,
                           style: const TextStyle(
@@ -172,65 +303,86 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           children: [
                             FilterChip(
                               label: Text(l10n.openings),
-                              selected: false,
-                              onSelected: (_) {},
+                              selected: _filterOpenings,
+                              onSelected: (v) => setState(() => _filterOpenings = v),
                             ),
                             FilterChip(
                               label: Text(l10n.closings),
-                              selected: false,
-                              onSelected: (_) {},
+                              selected: _filterClosings,
+                              onSelected: (v) => setState(() => _filterClosings = v),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        // Date range
+                        Text(
+                          l10n.period,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Row(
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () {},
+                                onPressed: () => _pickDate(context, isStart: true),
                                 style: OutlinedButton.styleFrom(
                                   minimumSize: const Size(0, 40),
-                                  side: const BorderSide(
-                                      color: AppColors.editTextBorder),
-                                  foregroundColor: AppColors.subtitleGray,
+                                  side: BorderSide(
+                                    color: _startDate != null
+                                        ? AppColors.primaryGreen
+                                        : AppColors.editTextBorder,
+                                  ),
+                                  foregroundColor: _startDate != null
+                                      ? AppColors.primaryGreen
+                                      : AppColors.subtitleGray,
                                 ),
-                                child: Text(l10n.startDate),
+                                child: Text(
+                                  _startDate != null
+                                      ? _formatDate(_startDate!)
+                                      : l10n.startDate,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () {},
+                                onPressed: () => _pickDate(context, isStart: false),
                                 style: OutlinedButton.styleFrom(
                                   minimumSize: const Size(0, 40),
-                                  side: const BorderSide(
-                                      color: AppColors.editTextBorder),
-                                  foregroundColor: AppColors.subtitleGray,
+                                  side: BorderSide(
+                                    color: _endDate != null
+                                        ? AppColors.primaryGreen
+                                        : AppColors.editTextBorder,
+                                  ),
+                                  foregroundColor: _endDate != null
+                                      ? AppColors.primaryGreen
+                                      : AppColors.subtitleGray,
                                 ),
-                                child: Text(l10n.endDate),
+                                child: Text(
+                                  _endDate != null
+                                      ? _formatDate(_endDate!)
+                                      : l10n.endDate,
+                                ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        // Clear / Apply buttons
                         Row(
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () {},
+                                onPressed: _clearFilters,
                                 child: Text(l10n.clearFilters),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _showFilter = false;
-                                  });
-                                },
+                                onPressed: _applyFilters,
                                 child: Text(l10n.applyFilters),
                               ),
                             ),
@@ -244,13 +396,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             // History list
             Expanded(
-              child: _historyItems.isEmpty
+              child: _filteredItems.isEmpty
                   ? _buildEmptyState(l10n)
                   : ListView.builder(
                       padding: const EdgeInsets.only(top: 8),
-                      itemCount: _historyItems.length,
+                      itemCount: _filteredItems.length,
                       itemBuilder: (context, index) {
-                        final item = _historyItems[index];
+                        final item = _filteredItems[index];
                         return HistoryItem(
                           valveName: item['valve']!,
                           action: item['action']!,
@@ -295,6 +447,199 @@ class _HistoryScreenState extends State<HistoryScreen> {
               fontSize: 14,
               color: AppColors.grayDisabled,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Compact calendar bottom sheet ────────────────────────────────────────────
+
+class _CompactCalendar extends StatefulWidget {
+  final DateTime initialDate;
+  const _CompactCalendar({required this.initialDate});
+
+  @override
+  State<_CompactCalendar> createState() => _CompactCalendarState();
+}
+
+class _CompactCalendarState extends State<_CompactCalendar> {
+  late DateTime _viewing;
+  late DateTime _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initialDate;
+    _viewing = DateTime(_selected.year, _selected.month);
+  }
+
+  int get _daysInMonth =>
+      DateTime(_viewing.year, _viewing.month + 1, 0).day;
+
+  // 0 = Mon … 6 = Sun
+  int get _firstDayOffset =>
+      DateTime(_viewing.year, _viewing.month, 1).weekday - 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = MaterialLocalizations.of(context);
+
+    // narrowWeekdays is Sun-first → reorder to Mon-first
+    final rawHeaders = localizations.narrowWeekdays; // [S,M,T,W,T,F,S]
+    final headers = [...rawHeaders.sublist(1), rawHeaders[0]];
+
+    final monthLabel = localizations.formatMonthYear(
+      DateTime(_viewing.year, _viewing.month),
+    );
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.grayDisabled,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Month navigation
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => setState(() {
+                  _viewing = DateTime(_viewing.year, _viewing.month - 1);
+                }),
+              ),
+              Text(
+                monthLabel,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.black,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => setState(() {
+                  _viewing = DateTime(_viewing.year, _viewing.month + 1);
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+
+          // Day-of-week headers
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: headers
+                .map((d) => SizedBox(
+                      width: 36,
+                      child: Center(
+                        child: Text(
+                          d,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.descriptionGray,
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 4),
+
+          // Day grid
+          GridView.count(
+            crossAxisCount: 7,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              ...List.generate(_firstDayOffset, (_) => const SizedBox()),
+              ...List.generate(_daysInMonth, (i) {
+                final day = i + 1;
+                final date = DateTime(_viewing.year, _viewing.month, day);
+                final isSelected = _selected.year == date.year &&
+                    _selected.month == date.month &&
+                    _selected.day == date.day;
+                final isToday = DateTime.now().year == date.year &&
+                    DateTime.now().month == date.month &&
+                    DateTime.now().day == date.day;
+                return GestureDetector(
+                  onTap: () => setState(() => _selected = date),
+                  child: Container(
+                    margin: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primaryGreen
+                          : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: isToday && !isSelected
+                          ? Border.all(color: AppColors.primaryGreen, width: 1)
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$day',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isSelected || isToday
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isSelected
+                              ? AppColors.white
+                              : AppColors.black,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  localizations.cancelButtonLabel,
+                  style: const TextStyle(color: AppColors.subtitleGray),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, _selected),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGreen,
+                  foregroundColor: AppColors.white,
+                  minimumSize: const Size(80, 40),
+                  elevation: 0,
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('OK'),
+              ),
+            ],
           ),
         ],
       ),
