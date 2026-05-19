@@ -189,5 +189,15 @@
   "connectionStatus": "Connection Status",
   "pistonStatus": "Piston Status",
   "pistonOpen": "Piston Open",
-  "pistonClosed": "Piston Closed"
+  "pistonClosed": "Piston Closed",
+  "selectAll": "Select All",
+  "deselectAll": "Deselect All",
+  "sinceBeginning": "Since beginning",
+  "period7Days": "Last 7 days",
+  "period30Days": "Last 30 days",
+  "connectionError": "Unable to reach server. Please check your connection.",
+  "useCurrentLocation": "Use current location",
+  "locationPermissionDenied": "Location permission denied",
+  "locationError": "Unable to get location. Please try again.",
+  "navigateTo": "Navigate to site"
 }

@@ -14,6 +14,7 @@ import 'screens/scheduling_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'services/token_manager.dart';
+import 'services/navigation_service.dart';
 import 'providers/locale_provider.dart';
 
 void main() {
@@ -32,6 +33,7 @@ class VanneControlApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       locale: locale,
+      navigatorKey: navigatorKey,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

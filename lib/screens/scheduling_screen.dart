@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/schedule_card.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/valve_provider.dart';
+import '../providers/profile_provider.dart';
 
 class SchedulingScreen extends ConsumerWidget {
   const SchedulingScreen({super.key});
@@ -15,6 +16,7 @@ class SchedulingScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final schedState = ref.watch(scheduleProvider);
     final valveState = ref.watch(valveProvider);
+    final valveLimit = int.tryParse(ref.watch(profileProvider).valueOrNull?.valves ?? '8') ?? 8;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -81,7 +83,7 @@ class SchedulingScreen extends ConsumerWidget {
                               repeatText: repeatDisplay,
                               isEnabled: plan.enabled,
                               onToggle: (v) => ref.read(scheduleProvider.notifier).togglePlan(plan, v),
-                              onEdit: () => _showEditDialog(context, ref, l10n, valveState, plan),
+                              onEdit: () => _showEditDialog(context, ref, l10n, valveState, valveLimit, plan),
                               onDelete: () => _confirmDelete(context, ref, l10n, plan),
                             );
                           },
@@ -96,7 +98,7 @@ class SchedulingScreen extends ConsumerWidget {
                 child: OutlinedButton(
                   onPressed: valveState.devices.isEmpty
                       ? null
-                      : () => _showAddDialog(context, ref, l10n, valveState),
+                      : () => _showAddDialog(context, ref, l10n, valveState, valveLimit),
                   style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                   child: Text(l10n.add, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
@@ -131,21 +133,21 @@ class SchedulingScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n, ValveState valveState) {
+  void _showAddDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n, ValveState valveState, int valveLimit) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _AddScheduleSheet(l10n: l10n, valveState: valveState, ref: ref),
+      builder: (_) => _AddScheduleSheet(l10n: l10n, valveState: valveState, ref: ref, valveLimit: valveLimit),
     );
   }
 
-  void _showEditDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n, ValveState valveState, plan) {
+  void _showEditDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n, ValveState valveState, int valveLimit, plan) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _AddScheduleSheet(l10n: l10n, valveState: valveState, ref: ref, editPlan: plan),
+      builder: (_) => _AddScheduleSheet(l10n: l10n, valveState: valveState, ref: ref, valveLimit: valveLimit, editPlan: plan),
     );
   }
 }
@@ -154,9 +156,10 @@ class _AddScheduleSheet extends StatefulWidget {
   final AppLocalizations l10n;
   final ValveState valveState;
   final WidgetRef ref;
+  final int valveLimit;
   final dynamic editPlan;
 
-  const _AddScheduleSheet({required this.l10n, required this.valveState, required this.ref, this.editPlan});
+  const _AddScheduleSheet({required this.l10n, required this.valveState, required this.ref, required this.valveLimit, this.editPlan});
 
   @override
   State<_AddScheduleSheet> createState() => _AddScheduleSheetState();
@@ -357,7 +360,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
           DropdownButtonFormField<int>(
             value: _pistonNumber,
             decoration: InputDecoration(labelText: l10n.selectValve),
-            items: List.generate(8, (i) => DropdownMenuItem(value: i + 1, child: Text('${l10n.valve} ${i + 1}'))),
+            items: List.generate(widget.valveLimit, (i) => DropdownMenuItem(value: i + 1, child: Text('${l10n.valve} ${i + 1}'))),
             onChanged: (v) => setState(() => _pistonNumber = v!),
           ),
           const SizedBox(height: 12),

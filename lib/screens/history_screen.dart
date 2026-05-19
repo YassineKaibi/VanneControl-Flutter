@@ -5,6 +5,7 @@ import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/history_item.dart';
 import '../providers/history_provider.dart';
+import '../providers/profile_provider.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
@@ -119,6 +120,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final valveLimit = int.tryParse(ref.watch(profileProvider).valueOrNull?.valves ?? '8') ?? 8;
     final historyAsync = ref.watch(historyProvider);
     final allItems = historyAsync.valueOrNull
             ?.map((e) => e.toMap())
@@ -261,7 +263,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
-                          children: List.generate(8, (i) {
+                          children: List.generate(valveLimit, (i) {
                             final valveNum = i + 1;
                             return FilterChip(
                               label: Text('${l10n.valve} $valveNum'),

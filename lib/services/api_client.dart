@@ -1,14 +1,17 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'constants.dart';
 import 'token_manager.dart';
 import 'network_result.dart';
+import 'navigation_service.dart';
 import '../models/api_responses.dart';
 
 /// ApiClient - Dio-based HTTP client with auth interceptor.
 /// Matches ApiClient.kt from the Android project.
 class ApiClient {
   static ApiClient? _instance;
+  static bool _redirectingToLogin = false;
   late final Dio _dio;
   final TokenManager _tokenManager = TokenManager.getInstance();
 
@@ -23,7 +26,7 @@ class ApiClient {
           Duration(seconds: Constants.writeTimeoutSeconds),
     ));
 
-    // Auth interceptor - adds Bearer token to all requests
+    // Auth interceptor - adds Bearer token + handles 401 auto-logout
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await _tokenManager.getToken();
@@ -32,6 +35,25 @@ class ApiClient {
               '${Constants.bearerPrefix}$token';
         }
         return handler.next(options);
+      },
+      onError: (error, handler) async {
+        if (error.response?.statusCode == 401 && !_redirectingToLogin) {
+          _redirectingToLogin = true;
+          await _tokenManager.clearAuth();
+          ApiClient.reset();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _redirectingToLogin = false;
+            navigatorKey.currentState
+                ?.pushNamedAndRemoveUntil('/login', (route) => false);
+          });
+          // Reject with a clean error so providers don't display raw 401 text
+          return handler.reject(DioException(
+            requestOptions: error.requestOptions,
+            message: 'Session expired',
+            type: DioExceptionType.cancel,
+          ));
+        }
+        return handler.next(error);
       },
     ));
 
@@ -52,6 +74,7 @@ class ApiClient {
   /// Reset the client (used on logout)
   static void reset() {
     _instance = null;
+    _redirectingToLogin = false;
   }
 
   Dio get dio => _dio;

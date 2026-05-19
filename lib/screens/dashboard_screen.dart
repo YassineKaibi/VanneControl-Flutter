@@ -139,10 +139,17 @@ class DashboardScreen extends ConsumerWidget {
                               ? const Center(child: CircularProgressIndicator())
                               : valveState.error != null
                                   ? Center(
-                                      child: Text(
-                                        valveState.error!,
-                                        style: const TextStyle(color: Colors.red, fontSize: 12),
-                                        textAlign: TextAlign.center,
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.wifi_off, color: AppColors.grayDisabled, size: 32),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            l10n.connectionError,
+                                            style: const TextStyle(color: AppColors.subtitleGray, fontSize: 13),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
                                       ),
                                     )
                                   : activeValves.isEmpty

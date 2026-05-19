@@ -1135,6 +1135,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Piston Closed'**
   String get pistonClosed;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get selectAll;
+
+  /// No description provided for @deselectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect All'**
+  String get deselectAll;
+
+  /// No description provided for @sinceBeginning.
+  ///
+  /// In en, this message translates to:
+  /// **'Since beginning'**
+  String get sinceBeginning;
+
+  /// No description provided for @period7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get period7Days;
+
+  /// No description provided for @period30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get period30Days;
+
+  /// No description provided for @connectionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to reach server. Please check your connection.'**
+  String get connectionError;
+
+  /// No description provided for @useCurrentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Use current location'**
+  String get useCurrentLocation;
+
+  /// No description provided for @locationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission denied'**
+  String get locationPermissionDenied;
+
+  /// No description provided for @locationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to get location. Please try again.'**
+  String get locationError;
+
+  /// No description provided for @navigateTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigate to site'**
+  String get navigateTo;
 }
 
 class _AppLocalizationsDelegate

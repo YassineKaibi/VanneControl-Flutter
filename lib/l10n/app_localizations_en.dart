@@ -536,4 +536,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pistonClosed => 'Piston Closed';
+
+  @override
+  String get selectAll => 'Select All';
+
+  @override
+  String get deselectAll => 'Deselect All';
+
+  @override
+  String get sinceBeginning => 'Since beginning';
+
+  @override
+  String get period7Days => 'Last 7 days';
+
+  @override
+  String get period30Days => 'Last 30 days';
+
+  @override
+  String get connectionError =>
+      'Unable to reach server. Please check your connection.';
+
+  @override
+  String get useCurrentLocation => 'Use current location';
+
+  @override
+  String get locationPermissionDenied => 'Location permission denied';
+
+  @override
+  String get locationError => 'Unable to get location. Please try again.';
+
+  @override
+  String get navigateTo => 'Navigate to site';
 }

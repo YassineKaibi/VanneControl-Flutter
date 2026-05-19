@@ -5,21 +5,25 @@ import '../theme/app_theme.dart';
 class ValveCard extends StatelessWidget {
   final String name;
   final bool isOpen;
+  final bool isDisabled;
   final VoidCallback? onTap;
 
   const ValveCard({
     super.key,
     required this.name,
     required this.isOpen,
+    this.isDisabled = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isOpen ? AppColors.primaryGreen : AppColors.valveInactiveRed;
+    final bgColor = isDisabled
+        ? AppColors.grayDisabled
+        : (isOpen ? AppColors.primaryGreen : AppColors.valveInactiveRed);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: isDisabled ? null : onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

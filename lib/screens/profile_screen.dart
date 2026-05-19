@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
@@ -283,7 +284,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _buildProfileRow('assets/icons/ic_calendar.svg', l10n.dateOfBirth, profile.dob.isEmpty ? '—' : profile.dob),
           _buildProfileRow('assets/icons/ic_email.svg', l10n.email, profile.email.isEmpty ? '—' : profile.email),
           _buildProfileRow('assets/icons/ic_phone.svg', l10n.phone, profile.phone.isEmpty ? '—' : profile.phone),
-          _buildProfileRow('assets/icons/ic_location.svg', l10n.location, profile.location.isEmpty ? '—' : profile.location, showDivider: false),
+          _buildLocationRow(l10n, profile.location),
         ],
       ),
     );
@@ -335,6 +336,87 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             padding: const EdgeInsets.only(left: 40, top: 12, bottom: 12),
             child: const Divider(height: 1, color: AppColors.divider),
           ),
+      ],
+    );
+  }
+
+  bool _isCoordinates(String value) {
+    return RegExp(r'^-?\d+\.\d+,\s*-?\d+\.\d+$').hasMatch(value.trim());
+  }
+
+  Future<void> _openGoogleMaps(String coords) async {
+    final parts = coords.split(',');
+    final lat = parts[0].trim();
+    final lon = parts[1].trim();
+    final geoUri = Uri.parse('geo:$lat,$lon?q=$lat,$lon');
+    final webUri = Uri.parse('https://maps.google.com/?q=$lat,$lon');
+    if (await canLaunchUrl(geoUri)) {
+      await launchUrl(geoUri);
+    } else {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Widget _buildLocationRow(AppLocalizations l10n, String location) {
+    final hasCoords = location.isNotEmpty && _isCoordinates(location);
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SvgPicture.asset(
+              'assets/icons/ic_location.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(AppColors.grayIcon, BlendMode.srcIn),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.location,
+                    style: const TextStyle(fontSize: 13, color: AppColors.placeholderGray),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    location.isEmpty ? '—' : location,
+                    style: const TextStyle(fontSize: 16, color: AppColors.black),
+                  ),
+                  if (hasCoords) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => _openGoogleMaps(location),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.navigation, color: Colors.white, size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              l10n.navigateTo,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

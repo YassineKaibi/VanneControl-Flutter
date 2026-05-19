@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_holo_date_picker/flutter_holo_date_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
@@ -20,6 +21,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   String? _avatarPath;
   bool _isSaving = false;
   bool _populated = false;
+  bool _loadingLocation = false;
   final _picker = ImagePicker();
 
   late final TextEditingController _firstNameCtrl;
@@ -156,6 +158,46 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _fetchLocation(AppLocalizations l10n) async {
+    setState(() => _loadingLocation = true);
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.locationPermissionDenied)),
+          );
+        }
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          timeLimit: Duration(seconds: 20),
+        ),
+      );
+
+      if (mounted) {
+        final lat = position.latitude.toStringAsFixed(6);
+        final lon = position.longitude.toStringAsFixed(6);
+        _locationCtrl.text = '$lat, $lon';
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.locationError)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingLocation = false);
+    }
   }
 
   @override
@@ -339,7 +381,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             const SizedBox(height: 16),
                             _buildTextField(l10n.phone, _phoneCtrl, keyboardType: TextInputType.phone),
                             const SizedBox(height: 16),
-                            _buildTextField(l10n.location, _locationCtrl),
+                            _buildLocationField(l10n),
                           ],
                         ),
                       ),
@@ -365,6 +407,46 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLocationField(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _locationCtrl,
+          decoration: InputDecoration(
+            labelText: l10n.location,
+            labelStyle: const TextStyle(color: AppColors.primaryGreen, fontSize: 16),
+            suffixIcon: _loadingLocation
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryGreen),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.my_location, color: AppColors.primaryGreen),
+                    tooltip: l10n.useCurrentLocation,
+                    onPressed: () => _fetchLocation(l10n),
+                  ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: AppColors.primaryGreen, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
+            ),
+            floatingLabelBehavior: FloatingLabelBehavior.always,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+          style: const TextStyle(fontSize: 16, color: AppColors.black),
+        ),
+      ],
     );
   }
 

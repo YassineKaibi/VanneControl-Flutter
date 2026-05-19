@@ -172,5 +172,15 @@
   "connectionStatus": "État de la connexion",
   "pistonStatus": "État du piston",
   "pistonOpen": "Piston ouvert",
-  "pistonClosed": "Piston fermé"
+  "pistonClosed": "Piston fermé",
+  "selectAll": "Tout sélectionner",
+  "deselectAll": "Tout désélectionner",
+  "sinceBeginning": "Depuis le début",
+  "period7Days": "7 derniers jours",
+  "period30Days": "30 derniers jours",
+  "connectionError": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+  "useCurrentLocation": "Utiliser la position actuelle",
+  "locationPermissionDenied": "Permission de localisation refusée",
+  "locationError": "Impossible d'obtenir la position. Réessayez.",
+  "navigateTo": "Naviguer vers le chantier"
 }

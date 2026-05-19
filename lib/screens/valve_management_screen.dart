@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/valve_card.dart';
 import '../models/api_responses.dart';
 import '../providers/valve_provider.dart';
+import '../providers/profile_provider.dart';
 
 class ValveManagementScreen extends ConsumerWidget {
   const ValveManagementScreen({super.key});
@@ -47,6 +48,7 @@ class ValveManagementScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final valveState = ref.watch(valveProvider);
+    final valveLimit = int.tryParse(ref.watch(profileProvider).valueOrNull?.valves ?? '8') ?? 8;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -133,6 +135,7 @@ class ValveManagementScreen extends ConsumerWidget {
                           : _DevicePistonGrid(
                               devices: valveState.devices,
                               l10n: l10n,
+                              valveLimit: valveLimit,
                               onTap: (device, piston) => _showConfirmDialog(
                                 context, ref, l10n, device, piston,
                               ),
@@ -148,11 +151,13 @@ class ValveManagementScreen extends ConsumerWidget {
 class _DevicePistonGrid extends StatefulWidget {
   final List<DeviceModel> devices;
   final AppLocalizations l10n;
+  final int valveLimit;
   final void Function(DeviceModel, PistonModel) onTap;
 
   const _DevicePistonGrid({
     required this.devices,
     required this.l10n,
+    required this.valveLimit,
     required this.onTap,
   });
 
@@ -204,10 +209,12 @@ class _DevicePistonGridState extends State<_DevicePistonGrid> {
                       final num = row * 2 + col + 1;
                       final piston = pistonMap[num];
                       final isOpen = piston?.isActive ?? false;
+                      final isDisabled = num > widget.valveLimit;
                       return ValveCard(
                         name: '${widget.l10n.valve} $num',
                         isOpen: isOpen,
-                        onTap: piston != null
+                        isDisabled: isDisabled,
+                        onTap: (!isDisabled && piston != null)
                             ? () => widget.onTap(device, piston)
                             : null,
                       );

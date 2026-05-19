@@ -538,4 +538,35 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pistonClosed => 'Piston fermé';
+
+  @override
+  String get selectAll => 'Tout sélectionner';
+
+  @override
+  String get deselectAll => 'Tout désélectionner';
+
+  @override
+  String get sinceBeginning => 'Depuis le début';
+
+  @override
+  String get period7Days => '7 derniers jours';
+
+  @override
+  String get period30Days => '30 derniers jours';
+
+  @override
+  String get connectionError =>
+      'Impossible de contacter le serveur. Vérifiez votre connexion.';
+
+  @override
+  String get useCurrentLocation => 'Utiliser la position actuelle';
+
+  @override
+  String get locationPermissionDenied => 'Permission de localisation refusée';
+
+  @override
+  String get locationError => 'Impossible d\'obtenir la position. Réessayez.';
+
+  @override
+  String get navigateTo => 'Naviguer vers le chantier';
 }
