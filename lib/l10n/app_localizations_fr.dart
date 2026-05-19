@@ -516,6 +516,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get valveSettings => 'Paramètres des vannes';
 
   @override
+  String get profileSaved => 'Profil enregistré avec succès';
+
+  @override
   String get numberOfValves => 'Nombre de vannes (1-8)';
 
   @override

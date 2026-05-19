@@ -1088,6 +1088,12 @@ abstract class AppLocalizations {
   /// **'Valve Settings'**
   String get valveSettings;
 
+  /// No description provided for @profileSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile saved successfully'**
+  String get profileSaved;
+
   /// No description provided for @numberOfValves.
   ///
   /// In en, this message translates to:

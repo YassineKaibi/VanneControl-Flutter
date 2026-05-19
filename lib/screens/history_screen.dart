@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:vanne_control_flutter/l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/history_item.dart';
+import '../providers/history_provider.dart';
 
-class HistoryScreen extends StatefulWidget {
+class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   bool _showFilter = false;
 
   final Set<int> _selectedValves = {};
@@ -19,25 +21,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   bool _filterClosings = false;
   DateTime? _startDate;
   DateTime? _endDate;
-
-  final List<Map<String, String>> _allItems = [
-    {'valve': 'Valve 1', 'action': 'Opened', 'time': '21/10/2025 14:30', 'user': 'Admin'},
-    {'valve': 'Valve 3', 'action': 'Closed',  'time': '21/10/2025 13:10', 'user': 'Admin'},
-    {'valve': 'Valve 2', 'action': 'Opened', 'time': '21/10/2025 11:45', 'user': 'Admin'},
-    {'valve': 'Valve 1', 'action': 'Closed',  'time': '20/10/2025 18:20', 'user': 'Admin'},
-    {'valve': 'Valve 5', 'action': 'Opened', 'time': '20/10/2025 16:00', 'user': 'Admin'},
-    {'valve': 'Valve 3', 'action': 'Opened', 'time': '20/10/2025 09:15', 'user': 'Admin'},
-    {'valve': 'Valve 2', 'action': 'Closed',  'time': '19/10/2025 22:30', 'user': 'Admin'},
-    {'valve': 'Valve 4', 'action': 'Opened', 'time': '19/10/2025 14:00', 'user': 'Admin'},
-  ];
-
-  List<Map<String, String>> _filteredItems = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _filteredItems = List.from(_allItems);
-  }
 
   DateTime? _parseDate(String timeStr) {
     try {
@@ -56,38 +39,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  List<Map<String, String>> _applyFiltersTo(List<Map<String, String>> allItems) {
+    return allItems.where((item) {
+      // Valve filter — extract number from any "Valve X" format
+      if (_selectedValves.isNotEmpty) {
+        final match = RegExp(r'\d+').firstMatch(item['valve'] ?? '');
+        final valveNum = match != null ? int.tryParse(match.group(0)!) : null;
+        if (valveNum == null || !_selectedValves.contains(valveNum)) return false;
+      }
+
+      // Action type filter
+      if (_filterOpenings && !_filterClosings) {
+        if (item['action'] != 'Opened') return false;
+      } else if (_filterClosings && !_filterOpenings) {
+        if (item['action'] != 'Closed') return false;
+      }
+
+      // Date range filter
+      if (_startDate != null || _endDate != null) {
+        final itemDate = _parseDate(item['time']!);
+        if (itemDate == null) return false;
+        if (_startDate != null && itemDate.isBefore(_startDate!)) return false;
+        if (_endDate != null) {
+          final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+          if (itemDate.isAfter(endOfDay)) return false;
+        }
+      }
+
+      return true;
+    }).toList();
+  }
+
   void _applyFilters() {
-    setState(() {
-      _filteredItems = _allItems.where((item) {
-        // Valve filter
-        if (_selectedValves.isNotEmpty) {
-          final valveNum = int.tryParse(item['valve']!.replaceAll('Valve ', ''));
-          if (valveNum == null || !_selectedValves.contains(valveNum)) return false;
-        }
-
-        // Action type filter
-        if (_filterOpenings && !_filterClosings) {
-          if (item['action'] != 'Opened') return false;
-        } else if (_filterClosings && !_filterOpenings) {
-          if (item['action'] != 'Closed') return false;
-        }
-
-        // Date range filter
-        if (_startDate != null || _endDate != null) {
-          final itemDate = _parseDate(item['time']!);
-          if (itemDate == null) return false;
-          if (_startDate != null && itemDate.isBefore(_startDate!)) return false;
-          if (_endDate != null) {
-            final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
-            if (itemDate.isAfter(endOfDay)) return false;
-          }
-        }
-
-        return true;
-      }).toList();
-
-      _showFilter = false;
-    });
+    setState(() => _showFilter = false);
   }
 
   void _clearFilters() {
@@ -97,7 +81,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _filterClosings = false;
       _startDate = null;
       _endDate = null;
-      _filteredItems = List.from(_allItems);
+      _showFilter = false;
     });
   }
 
@@ -135,6 +119,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final historyAsync = ref.watch(historyProvider);
+    final allItems = historyAsync.valueOrNull
+            ?.map((e) => e.toMap())
+            .toList() ??
+        [];
+    final filteredItems = _applyFiltersTo(allItems);
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -229,7 +219,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 12, left: 16),
               child: Text(
-                l10n.resultCount(_filteredItems.length, _allItems.length),
+                l10n.resultCount(filteredItems.length, allItems.length),
                 style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.descriptionGray,
@@ -396,13 +386,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             // History list
             Expanded(
-              child: _filteredItems.isEmpty
+              child: filteredItems.isEmpty
                   ? _buildEmptyState(l10n)
                   : ListView.builder(
                       padding: const EdgeInsets.only(top: 8),
-                      itemCount: _filteredItems.length,
+                      itemCount: filteredItems.length,
                       itemBuilder: (context, index) {
-                        final item = _filteredItems[index];
+                        final item = filteredItems[index];
                         return HistoryItem(
                           valveName: item['valve']!,
                           action: item['action']!,

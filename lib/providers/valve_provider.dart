@@ -4,6 +4,8 @@ import '../models/api_responses.dart';
 import '../services/api_client.dart';
 import '../services/token_manager.dart';
 import '../services/websocket_service.dart';
+import 'history_provider.dart';
+import 'profile_provider.dart';
 
 class ValveState {
   final bool isLoading;
@@ -29,12 +31,13 @@ class ValveState {
 }
 
 class ValveNotifier extends StateNotifier<ValveState> {
+  final Ref _ref;
   final _apiClient = ApiClient.getInstance();
   final _tokenManager = TokenManager.getInstance();
   final _wsService = WebSocketService();
   StreamSubscription? _wsSub;
 
-  ValveNotifier() : super(const ValveState()) {
+  ValveNotifier(this._ref) : super(const ValveState()) {
     _init();
   }
 
@@ -45,13 +48,11 @@ class ValveNotifier extends StateNotifier<ValveState> {
 
   Future<void> _fetchDevicesAndPistons() async {
     try {
-      // Fetch devices
       final devResp = await _apiClient.dio.get('devices');
       final deviceList = (devResp.data['devices'] as List<dynamic>)
           .map((d) => DeviceModel.fromJson(d as Map<String, dynamic>))
           .toList();
 
-      // Fetch pistons for each device
       final devicesWithPistons = await Future.wait(
         deviceList.map((device) async {
           try {
@@ -82,7 +83,6 @@ class ValveNotifier extends StateNotifier<ValveState> {
 
     await _wsService.connect(token);
 
-    // Subscribe to all devices
     for (final device in state.devices) {
       _wsService.subscribeToDevice(device.id);
     }
@@ -143,14 +143,33 @@ class ValveNotifier extends StateNotifier<ValveState> {
         'devices/$deviceId/pistons/$pistonNumber',
         data: {'action': action, 'piston_number': pistonNumber},
       );
-      // Optimistic update while waiting for WebSocket confirmation
       _handlePistonUpdate({
         'device_id': deviceId,
         'piston_number': pistonNumber,
         'state': currentlyActive ? 'inactive' : 'active',
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       });
+      _recordHistory(pistonNumber, currentlyActive);
     } catch (_) {}
+  }
+
+  void _recordHistory(int pistonNumber, bool wasActive) {
+    final profile = _ref.read(profileProvider).valueOrNull;
+    final name = '${profile?.firstName ?? ''} ${profile?.lastName ?? ''}'.trim();
+    final user = name.isEmpty ? 'Admin' : name;
+
+    final now = DateTime.now();
+    final d = now.day.toString().padLeft(2, '0');
+    final m = now.month.toString().padLeft(2, '0');
+    final h = now.hour.toString().padLeft(2, '0');
+    final min = now.minute.toString().padLeft(2, '0');
+
+    _ref.read(historyProvider.notifier).addEntry(HistoryEntry(
+      valve: 'Valve $pistonNumber',
+      action: wasActive ? 'Closed' : 'Opened',
+      time: '$d/$m/${now.year} $h:$min',
+      user: user,
+    ));
   }
 
   Future<void> refresh() async {
@@ -167,5 +186,5 @@ class ValveNotifier extends StateNotifier<ValveState> {
 }
 
 final valveProvider = StateNotifierProvider<ValveNotifier, ValveState>((ref) {
-  return ValveNotifier();
+  return ValveNotifier(ref);
 });

@@ -514,6 +514,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get valveSettings => 'Valve Settings';
 
   @override
+  String get profileSaved => 'Profile saved successfully';
+
+  @override
   String get numberOfValves => 'Number of Valves (1-8)';
 
   @override
