@@ -102,11 +102,6 @@ class ValveManagementScreen extends ConsumerWidget {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  else
-                    GestureDetector(
-                      onTap: () => ref.read(valveProvider.notifier).refresh(),
-                      child: const Icon(Icons.refresh, color: AppColors.primaryGreen),
                     ),
                 ],
               ),
@@ -171,59 +166,75 @@ class _DevicePistonGridState extends State<_DevicePistonGrid> {
   @override
   Widget build(BuildContext context) {
     final device = widget.devices[_selectedDeviceIndex];
-
-    // Build a map of pistonNumber → PistonModel for quick lookup
     final pistonMap = {for (final p in device.pistons) p.pistonNumber: p};
+    final hasDropdown = widget.devices.length > 1;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          // Device selector (only if multiple devices)
-          if (widget.devices.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: DropdownButton<int>(
-                value: _selectedDeviceIndex,
-                isExpanded: true,
-                items: List.generate(
-                  widget.devices.length,
-                  (i) => DropdownMenuItem(
-                    value: i,
-                    child: Text(widget.devices[i].name),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const vPad = 12.0;
+        const hPad = 16.0;
+        const dropdownH = 52.0;
+        const labelH = 6.0 + 15.0; // SizedBox + text
+        final usableH = constraints.maxHeight
+            - vPad * 2
+            - (hasDropdown ? dropdownH : 0);
+        // 4 rows, each = circleSize + labelH, distributed with spaceEvenly
+        // spaceEvenly adds (n+1) equal gaps, so effective row height = usableH / 4
+        final circleSize = ((usableH / 4) - labelH).clamp(50.0, 100.0);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+          child: Column(
+            children: [
+              if (hasDropdown)
+                SizedBox(
+                  height: dropdownH,
+                  child: DropdownButton<int>(
+                    value: _selectedDeviceIndex,
+                    isExpanded: true,
+                    items: List.generate(
+                      widget.devices.length,
+                      (i) => DropdownMenuItem(
+                        value: i,
+                        child: Text(widget.devices[i].name),
+                      ),
+                    ),
+                    onChanged: (i) => setState(() => _selectedDeviceIndex = i!),
                   ),
                 ),
-                onChanged: (i) => setState(() => _selectedDeviceIndex = i!),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    for (int row = 0; row < 4; row++)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          for (int col = 0; col < 2; col++)
+                            Builder(builder: (_) {
+                              final num = row * 2 + col + 1;
+                              final piston = pistonMap[num];
+                              final isOpen = piston?.isActive ?? false;
+                              final isDisabled = num > widget.valveLimit;
+                              return ValveCard(
+                                name: '${widget.l10n.valve} $num',
+                                isOpen: isOpen,
+                                isDisabled: isDisabled,
+                                size: circleSize,
+                                onTap: (!isDisabled && piston != null)
+                                    ? () => widget.onTap(device, piston)
+                                    : null,
+                              );
+                            }),
+                        ],
+                      ),
+                  ],
+                ),
               ),
-            ),
-
-          // 4 rows × 2 columns = 8 pistons
-          for (int row = 0; row < 4; row++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  for (int col = 0; col < 2; col++)
-                    Builder(builder: (_) {
-                      final num = row * 2 + col + 1;
-                      final piston = pistonMap[num];
-                      final isOpen = piston?.isActive ?? false;
-                      final isDisabled = num > widget.valveLimit;
-                      return ValveCard(
-                        name: '${widget.l10n.valve} $num',
-                        isOpen: isOpen,
-                        isDisabled: isDisabled,
-                        onTap: (!isDisabled && piston != null)
-                            ? () => widget.onTap(device, piston)
-                            : null,
-                      );
-                    }),
-                ],
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

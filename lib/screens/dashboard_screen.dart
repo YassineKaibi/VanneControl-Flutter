@@ -115,11 +115,6 @@ class DashboardScreen extends ConsumerWidget {
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          else
-                            GestureDetector(
-                              onTap: () => ref.read(valveProvider.notifier).refresh(),
-                              child: const Icon(Icons.refresh, size: 20, color: AppColors.primaryGreen),
                             ),
                         ],
                       ),

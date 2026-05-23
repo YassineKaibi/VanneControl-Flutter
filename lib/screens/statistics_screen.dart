@@ -58,6 +58,33 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     }
   }
 
+  // Distributes open-duration minutes across time buckets, splitting sessions that
+  // span bucket boundaries.
+  void _distributeDuration(
+    List<double> buckets,
+    DateTime open,
+    DateTime close,
+    DateTime rangeStart,
+    Duration bucketSize,
+    int totalBuckets,
+  ) {
+    var cursor = open.isBefore(rangeStart) ? rangeStart : open;
+    while (cursor.isBefore(close)) {
+      final offsetMicros = cursor.difference(rangeStart).inMicroseconds;
+      final bucketIdx = (offsetMicros / bucketSize.inMicroseconds).floor();
+      if (bucketIdx < 0) {
+        cursor = rangeStart;
+        continue;
+      }
+      if (bucketIdx >= totalBuckets) break;
+      final bucketEnd = rangeStart
+          .add(Duration(microseconds: (bucketIdx + 1) * bucketSize.inMicroseconds));
+      final segmentEnd = close.isBefore(bucketEnd) ? close : bucketEnd;
+      buckets[bucketIdx] += segmentEnd.difference(cursor).inSeconds / 60.0;
+      cursor = segmentEnd;
+    }
+  }
+
   ({List<LineChartBarData> bars, List<int> valveNums, List<String> xLabels})
       _buildChartData(List<HistoryEntry> allHistory) {
     final empty = (bars: <LineChartBarData>[], valveNums: <int>[], xLabels: <String>[]);
@@ -112,27 +139,47 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
         (now.difference(rangeStart).inMicroseconds / bucketSize.inMicroseconds).ceil() + 1;
     if (totalBuckets <= 0) return empty;
 
+    // Group entries by valve number, sorted oldest-first
+    final byValve = <int, List<({HistoryEntry entry, DateTime date})>>{};
+    for (final p in parsed) {
+      final match = RegExp(r'\d+').firstMatch(p.entry.valve);
+      if (match == null) continue;
+      final vNum = int.tryParse(match.group(0)!);
+      if (vNum == null) continue;
+      byValve.putIfAbsent(vNum, () => []).add(p);
+    }
+
     final bars = <LineChartBarData>[];
     final valveNums = <int>[];
 
     for (final valveNum in (_selectedValves.toList()..sort())) {
-      final counts = List.filled(totalBuckets, 0);
+      final entries = byValve[valveNum];
+      if (entries == null) continue;
+      entries.sort((a, b) => a.date.compareTo(b.date));
 
-      for (final e in parsed) {
-        if (e.date.isBefore(rangeStart)) continue;
-        final match = RegExp(r'\d+').firstMatch(e.entry.valve);
-        if (match == null) continue;
-        if (int.tryParse(match.group(0)!) != valveNum) continue;
+      final buckets = List.filled(totalBuckets, 0.0);
+      DateTime? openTime;
 
-        final bucketIdx =
-            (e.date.difference(rangeStart).inMicroseconds / bucketSize.inMicroseconds).floor();
-        if (bucketIdx >= 0 && bucketIdx < totalBuckets) counts[bucketIdx]++;
+      for (final p in entries) {
+        final action = p.entry.action.toLowerCase();
+        if (action.startsWith('open')) {
+          openTime = p.date;
+        } else if (action.startsWith('clos') && openTime != null) {
+          _distributeDuration(buckets, openTime, p.date, rangeStart, bucketSize, totalBuckets);
+          openTime = null;
+        }
+      }
+      // Valve still open with no matching close → count until now
+      if (openTime != null) {
+        _distributeDuration(buckets, openTime, now, rangeStart, bucketSize, totalBuckets);
       }
 
-      if (counts.every((c) => c == 0)) continue;
+      if (buckets.every((c) => c == 0)) continue;
 
       final spots = List.generate(
-          totalBuckets, (i) => FlSpot(i.toDouble(), counts[i].toDouble()));
+        totalBuckets,
+        (i) => FlSpot(i.toDouble(), double.parse(buckets[i].toStringAsFixed(1))),
+      );
 
       final color = _valveColors[(valveNum - 1) % _valveColors.length];
       bars.add(LineChartBarData(
@@ -238,18 +285,6 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                         color: AppColors.black,
                       ),
                     ),
-                  ),
-                  OutlinedButton(
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.todoImplement)),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      textStyle: const TextStyle(fontSize: 12),
-                    ),
-                    child: Text(l10n.exportPdf),
                   ),
                 ],
               ),
@@ -394,126 +429,143 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                     const SizedBox(height: 16),
 
                     // Line chart
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-                        child: chartBars.isEmpty
-                            ? SizedBox(
-                                height: 200,
-                                child: Center(
-                                  child: Text(
-                                    l10n.noData,
-                                    style: const TextStyle(
-                                        color: AppColors.grayIcon),
-                                  ),
-                                ),
-                              )
-                            : SizedBox(
-                                height: 280,
-                                child: LineChart(
-                                  LineChartData(
-                                    lineBarsData: chartBars,
-                                    gridData: FlGridData(
-                                      show: true,
-                                      drawVerticalLine: false,
-                                      getDrawingHorizontalLine: (_) => FlLine(
-                                        color: AppColors.grey,
-                                        strokeWidth: 0.8,
-                                      ),
+                    Builder(builder: (context) {
+                      double maxY = 0;
+                      for (final bar in chartBars) {
+                        for (final spot in bar.spots) {
+                          if (spot.y > maxY) maxY = spot.y;
+                        }
+                      }
+                      final yInterval = maxY <= 0
+                          ? 10.0
+                          : double.parse(
+                              ((maxY / 4).ceilToDouble()).toStringAsFixed(1));
+
+                      return Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 16, 24, 8),
+                          child: chartBars.isEmpty
+                              ? SizedBox(
+                                  height: 200,
+                                  child: Center(
+                                    child: Text(
+                                      l10n.noData,
+                                      style: const TextStyle(
+                                          color: AppColors.grayIcon),
                                     ),
-                                    titlesData: FlTitlesData(
-                                      leftTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          reservedSize: 32,
-                                          interval: 1,
-                                          getTitlesWidget: (val, meta) {
-                                            if (val != val.roundToDouble()) {
-                                              return const SizedBox();
-                                            }
-                                            return Text(
-                                              val.toInt().toString(),
-                                              style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: AppColors.subtitleGray),
-                                            );
-                                          },
+                                  ),
+                                )
+                              : SizedBox(
+                                  height: 280,
+                                  child: LineChart(
+                                    LineChartData(
+                                      minY: 0,
+                                      maxY: maxY * 1.15,
+                                      lineBarsData: chartBars,
+                                      gridData: FlGridData(
+                                        show: true,
+                                        drawVerticalLine: false,
+                                        getDrawingHorizontalLine: (_) => FlLine(
+                                          color: AppColors.grey,
+                                          strokeWidth: 0.8,
                                         ),
                                       ),
-                                      bottomTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          reservedSize: 28,
-                                          getTitlesWidget: (val, meta) {
-                                            final idx = val.toInt();
-                                            if (idx < 0 || idx >= chartXLabels.length) {
-                                              return const SizedBox();
-                                            }
-                                            final total = chartXLabels.length;
-                                            final step = (total / 5).ceil().clamp(1, total);
-                                            if (idx % step != 0 && idx != total - 1) {
-                                              return const SizedBox();
-                                            }
-                                            return Padding(
-                                              padding: const EdgeInsets.only(top: 4),
-                                              child: Text(
-                                                chartXLabels[idx],
+                                      titlesData: FlTitlesData(
+                                        leftTitles: AxisTitles(
+                                          sideTitles: SideTitles(
+                                            showTitles: true,
+                                            reservedSize: 42,
+                                            interval: yInterval,
+                                            getTitlesWidget: (val, meta) {
+                                              if (val < 0) return const SizedBox();
+                                              return Text(
+                                                '${val.toStringAsFixed(val < 10 ? 1 : 0)}m',
                                                 style: const TextStyle(
                                                     fontSize: 10,
                                                     color: AppColors.subtitleGray),
-                                              ),
-                                            );
-                                          },
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        bottomTitles: AxisTitles(
+                                          sideTitles: SideTitles(
+                                            showTitles: true,
+                                            reservedSize: 28,
+                                            getTitlesWidget: (val, meta) {
+                                              final idx = val.toInt();
+                                              if (idx < 0 || idx >= chartXLabels.length) {
+                                                return const SizedBox();
+                                              }
+                                              final total = chartXLabels.length;
+                                              final step = (total / 5).ceil().clamp(1, total);
+                                              if (idx % step != 0 && idx != total - 1) {
+                                                return const SizedBox();
+                                              }
+                                              return Padding(
+                                                padding: const EdgeInsets.only(top: 4),
+                                                child: Text(
+                                                  chartXLabels[idx],
+                                                  style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: AppColors.subtitleGray),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        topTitles: const AxisTitles(
+                                            sideTitles: SideTitles(
+                                                showTitles: false)),
+                                        rightTitles: const AxisTitles(
+                                            sideTitles: SideTitles(
+                                                showTitles: false)),
+                                      ),
+                                      borderData: FlBorderData(
+                                        show: true,
+                                        border: const Border(
+                                          left: BorderSide(
+                                              color: AppColors.editTextBorder),
+                                          bottom: BorderSide(
+                                              color: AppColors.editTextBorder),
                                         ),
                                       ),
-                                      topTitles: const AxisTitles(
-                                          sideTitles: SideTitles(
-                                              showTitles: false)),
-                                      rightTitles: const AxisTitles(
-                                          sideTitles: SideTitles(
-                                              showTitles: false)),
-                                    ),
-                                    borderData: FlBorderData(
-                                      show: true,
-                                      border: const Border(
-                                        left: BorderSide(
-                                            color: AppColors.editTextBorder),
-                                        bottom: BorderSide(
-                                            color: AppColors.editTextBorder),
-                                      ),
-                                    ),
-                                    lineTouchData: LineTouchData(
-                                      touchTooltipData:
-                                          LineTouchTooltipData(
-                                        getTooltipColor: (spot) =>
-                                            Colors.blueGrey.shade800,
-                                        getTooltipItems: (spots) =>
-                                            spots.map((s) {
-                                          final vNum = s.barIndex <
-                                                  chartValveNums.length
-                                              ? chartValveNums[s.barIndex]
-                                              : s.barIndex + 1;
-                                          final color =
-                                              _valveColors[(vNum - 1) %
-                                                  _valveColors.length];
-                                          return LineTooltipItem(
-                                            '${l10n.valve} $vNum: ${s.y.toInt()}',
-                                            TextStyle(
-                                                color: color,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 12),
-                                          );
-                                        }).toList(),
+                                      lineTouchData: LineTouchData(
+                                        touchTooltipData:
+                                            LineTouchTooltipData(
+                                          getTooltipColor: (spot) =>
+                                              Colors.blueGrey.shade800,
+                                          getTooltipItems: (spots) =>
+                                              spots.map((s) {
+                                            final vNum = s.barIndex <
+                                                    chartValveNums.length
+                                                ? chartValveNums[s.barIndex]
+                                                : s.barIndex + 1;
+                                            final color =
+                                                _valveColors[(vNum - 1) %
+                                                    _valveColors.length];
+                                            final mins = s.y;
+                                            final label = mins >= 60
+                                                ? '${(mins / 60).toStringAsFixed(1)}h'
+                                                : '${mins.toStringAsFixed(0)} min';
+                                            return LineTooltipItem(
+                                              '${l10n.valve} $vNum: $label',
+                                              TextStyle(
+                                                  color: color,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12),
+                                            );
+                                          }).toList(),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                      ),
-                    ),
+                        ),
+                      );
+                    }),
 
                     // Legend
                     if (chartBars.isNotEmpty) ...[

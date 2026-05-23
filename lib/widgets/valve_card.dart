@@ -7,6 +7,7 @@ class ValveCard extends StatelessWidget {
   final bool isOpen;
   final bool isDisabled;
   final VoidCallback? onTap;
+  final double size;
 
   const ValveCard({
     super.key,
@@ -14,13 +15,14 @@ class ValveCard extends StatelessWidget {
     required this.isOpen,
     this.isDisabled = false,
     this.onTap,
+    this.size = 100,
   });
 
   @override
   Widget build(BuildContext context) {
     final bgColor = isDisabled
         ? AppColors.grayDisabled
-        : (isOpen ? AppColors.primaryGreen : AppColors.valveInactiveRed);
+        : (isOpen ? AppColors.primaryGreen : AppColors.deleteRed);
 
     return GestureDetector(
       onTap: isDisabled ? null : onTap,
@@ -30,16 +32,16 @@ class ValveCard extends StatelessWidget {
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(50),
+              borderRadius: BorderRadius.circular(size / 2),
             ),
             child: Container(
-              width: 100,
-              height: 100,
+              width: size,
+              height: size,
               decoration: BoxDecoration(
                 color: bgColor,
                 shape: BoxShape.circle,
               ),
-              padding: const EdgeInsets.all(25),
+              padding: EdgeInsets.all(size * 0.25),
               child: SvgPicture.asset(
                 isOpen
                     ? 'assets/icons/ic_toggle_on.svg'
@@ -51,11 +53,11 @@ class ValveCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Text(
             name,
-            style: const TextStyle(
-              fontSize: 16,
+            style: TextStyle(
+              fontSize: (size * 0.14).clamp(11.0, 15.0),
               fontWeight: FontWeight.bold,
               color: AppColors.black,
             ),
