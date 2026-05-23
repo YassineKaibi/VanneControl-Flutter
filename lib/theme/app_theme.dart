@@ -120,13 +120,20 @@ class AppTheme {
         foregroundColor: AppColors.white,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.grey,
-        selectedColor: AppColors.honeydew,
-        labelStyle: const TextStyle(fontSize: 14),
+        backgroundColor: AppColors.white,
+        selectedColor: AppColors.white,
+        labelStyle: const TextStyle(fontSize: 14, color: AppColors.black),
+        secondaryLabelStyle: const TextStyle(fontSize: 14, color: AppColors.primaryGreen),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        side: BorderSide.none,
+        side: WidgetStateBorderSide.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const BorderSide(color: AppColors.primaryGreen, width: 1.5);
+          }
+          return const BorderSide(color: AppColors.editTextBorder, width: 1);
+        }),
+        showCheckmark: false,
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {

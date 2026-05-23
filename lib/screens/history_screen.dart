@@ -265,9 +265,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           spacing: 8,
                           children: List.generate(valveLimit, (i) {
                             final valveNum = i + 1;
+                            final isSelected = _selectedValves.contains(valveNum);
                             return FilterChip(
                               label: Text('${l10n.valve} $valveNum'),
-                              selected: _selectedValves.contains(valveNum),
+                              selected: isSelected,
+                              labelStyle: TextStyle(
+                                color: isSelected ? AppColors.primaryGreen : AppColors.black,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
                               onSelected: (selected) {
                                 setState(() {
                                   if (selected) {
@@ -296,11 +301,19 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             FilterChip(
                               label: Text(l10n.openings),
                               selected: _filterOpenings,
+                              labelStyle: TextStyle(
+                                color: _filterOpenings ? AppColors.primaryGreen : AppColors.black,
+                                fontWeight: _filterOpenings ? FontWeight.bold : FontWeight.normal,
+                              ),
                               onSelected: (v) => setState(() => _filterOpenings = v),
                             ),
                             FilterChip(
                               label: Text(l10n.closings),
                               selected: _filterClosings,
+                              labelStyle: TextStyle(
+                                color: _filterClosings ? AppColors.primaryGreen : AppColors.black,
+                                fontWeight: _filterClosings ? FontWeight.bold : FontWeight.normal,
+                              ),
                               onSelected: (v) => setState(() => _filterClosings = v),
                             ),
                           ],

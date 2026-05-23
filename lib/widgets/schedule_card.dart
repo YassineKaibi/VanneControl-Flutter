@@ -33,7 +33,7 @@ class ScheduleCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      color: AppColors.honeydew,
+      color: const Color(0xFFF6FAEE),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),

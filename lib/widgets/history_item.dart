@@ -30,17 +30,6 @@ class HistoryItem extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            // Green status indicator bar on left
-            Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: AppColors.primaryGreen,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  bottomLeft: Radius.circular(8),
-                ),
-              ),
-            ),
             // Toggle icon
             Container(
               width: 40,

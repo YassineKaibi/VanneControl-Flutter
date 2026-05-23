@@ -173,7 +173,7 @@ class ValveNotifier extends StateNotifier<ValveState> {
   }
 
   Future<void> refresh() async {
-    state = const ValveState(isLoading: true);
+    state = ValveState(isLoading: true, devices: state.devices);
     await _fetchDevicesAndPistons();
   }
 

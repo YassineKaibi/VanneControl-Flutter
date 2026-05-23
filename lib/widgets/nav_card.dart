@@ -7,6 +7,8 @@ class NavCard extends StatelessWidget {
   final String title;
   final String description;
   final VoidCallback? onTap;
+  final Color? iconColor;
+  final Color? iconBgColor;
 
   const NavCard({
     super.key,
@@ -14,6 +16,8 @@ class NavCard extends StatelessWidget {
     required this.title,
     required this.description,
     this.onTap,
+    this.iconColor,
+    this.iconBgColor,
   });
 
   @override
@@ -31,15 +35,21 @@ class NavCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 48,
+                height: 48,
+                decoration: iconBgColor != null
+                    ? BoxDecoration(
+                        color: iconBgColor,
+                        shape: BoxShape.circle,
+                      )
+                    : null,
                 padding: const EdgeInsets.all(8),
                 child: SvgPicture.asset(
                   svgAsset,
                   width: 24,
                   height: 24,
-                  colorFilter: const ColorFilter.mode(
-                    AppColors.primaryGreen,
+                  colorFilter: ColorFilter.mode(
+                    iconColor ?? AppColors.primaryGreen,
                     BlendMode.srcIn,
                   ),
                 ),

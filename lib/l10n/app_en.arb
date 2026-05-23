@@ -70,7 +70,7 @@
   "closeValve": "Close",
   "opened": "Opened",
   "closed": "Closed",
-  "historyTitle": "Valve operation history",
+  "historyTitle": "Valve Operation History",
   "filterHistory": "Filter History",
   "selectValves": "Select Valves",
   "actionType": "Action Type:",

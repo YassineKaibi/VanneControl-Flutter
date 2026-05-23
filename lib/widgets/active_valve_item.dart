@@ -31,7 +31,7 @@ class ActiveValveItem extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8E8E8),
+                color: const Color(0xFFF6FAEE),
                 shape: BoxShape.circle,
               ),
               child: Column(
@@ -40,7 +40,7 @@ class ActiveValveItem extends StatelessWidget {
                   Text(
                     name,
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: AppColors.black,
                     ),
@@ -51,7 +51,7 @@ class ActiveValveItem extends StatelessWidget {
                     width: 24,
                     height: 24,
                     colorFilter: const ColorFilter.mode(
-                      AppColors.primaryGreen,
+                      Color(0xFF2E7D32),
                       BlendMode.srcIn,
                     ),
                   ),
@@ -64,14 +64,14 @@ class ActiveValveItem extends StatelessWidget {
             status,
             style: const TextStyle(
               fontSize: 12,
-              color: AppColors.primaryGreen,
+              color: AppColors.black,
             ),
           ),
           Text(
             time,
             style: const TextStyle(
               fontSize: 11,
-              color: AppColors.placeholderGray,
+              color: AppColors.black,
             ),
           ),
         ],

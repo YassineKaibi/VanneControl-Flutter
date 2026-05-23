@@ -62,7 +62,7 @@ class SchedulingScreen extends ConsumerWidget {
 
             // List
             Expanded(
-              child: schedState.isLoading
+              child: schedState.isLoading && schedState.plans.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : schedState.plans.isEmpty
                       ? _EmptyState(l10n: l10n)

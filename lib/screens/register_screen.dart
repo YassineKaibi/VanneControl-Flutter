@@ -112,91 +112,47 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
     });
 
+    final size = MediaQuery.of(context).size;
+    final h = size.height;
+    final w = size.width;
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 45),
+              padding: EdgeInsets.symmetric(horizontal: w * 0.08, vertical: h * 0.05),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
-                  const SizedBox(height: 60),
-                  Text(
-                    l10n.registerTitle,
-                    style: const TextStyle(
-                      fontSize: 35,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.black,
+                  SizedBox(height: h * 0.06),
+                  Center(
+                    child: Text(
+                      l10n.registerTitle,
+                      style: TextStyle(
+                        fontSize: w * 0.09,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.black,
+                      ),
                     ),
                   ),
 
-                  // First name
-                  _buildField(
-                    controller: _firstNameController,
-                    hint: l10n.firstNameHint,
-                    error: firstNameError,
-                    topMargin: 48,
-                    enabled: !isLoading,
-                  ),
+                  _buildField(controller: _firstNameController, hint: l10n.firstNameHint, error: firstNameError, topMargin: h * 0.04, fieldHeight: h * 0.065, fontSize: w * 0.04, enabled: !isLoading),
+                  _buildField(controller: _lastNameController, hint: l10n.lastNameHint, error: lastNameError, topMargin: h * 0.02, fieldHeight: h * 0.065, fontSize: w * 0.04, enabled: !isLoading),
+                  _buildField(controller: _emailController, hint: l10n.emailHint, error: emailError, topMargin: h * 0.02, fieldHeight: h * 0.065, fontSize: w * 0.04, keyboardType: TextInputType.emailAddress, enabled: !isLoading),
+                  _buildField(controller: _phoneController, hint: l10n.phoneHint, error: phoneError, topMargin: h * 0.02, fieldHeight: h * 0.065, fontSize: w * 0.04, keyboardType: TextInputType.phone, enabled: !isLoading),
+                  _buildField(controller: _passwordController, hint: l10n.passwordHint, error: passwordError, topMargin: h * 0.02, fieldHeight: h * 0.065, fontSize: w * 0.04, obscureText: true, enabled: !isLoading),
+                  _buildField(controller: _confirmPasswordController, hint: l10n.confirmPasswordHint, error: confirmPasswordError, topMargin: h * 0.02, fieldHeight: h * 0.065, fontSize: w * 0.04, obscureText: true, enabled: !isLoading),
 
-                  // Last name
-                  _buildField(
-                    controller: _lastNameController,
-                    hint: l10n.lastNameHint,
-                    error: lastNameError,
-                    enabled: !isLoading,
-                  ),
-
-                  // Email
-                  _buildField(
-                    controller: _emailController,
-                    hint: l10n.emailHint,
-                    error: emailError,
-                    keyboardType: TextInputType.emailAddress,
-                    enabled: !isLoading,
-                  ),
-
-                  // Phone
-                  _buildField(
-                    controller: _phoneController,
-                    hint: l10n.phoneHint,
-                    error: phoneError,
-                    keyboardType: TextInputType.phone,
-                    enabled: !isLoading,
-                  ),
-
-                  // Password
-                  _buildField(
-                    controller: _passwordController,
-                    hint: l10n.passwordHint,
-                    error: passwordError,
-                    obscureText: true,
-                    enabled: !isLoading,
-                  ),
-
-                  // Confirm password
-                  _buildField(
-                    controller: _confirmPasswordController,
-                    hint: l10n.confirmPasswordHint,
-                    error: confirmPasswordError,
-                    obscureText: true,
-                    enabled: !isLoading,
-                  ),
-
-                  // Register button
                   Padding(
-                    padding: const EdgeInsets.only(left: 15, right: 15, top: 32),
+                    padding: EdgeInsets.only(top: h * 0.04),
                     child: SizedBox(
                       width: double.infinity,
-                      height: 50,
+                      height: h * 0.065,
                       child: OutlinedButton(
                         onPressed: isLoading ? null : _onRegister,
-                        child: Text(
-                          isLoading ? l10n.registering : l10n.registerButton,
-                        ),
+                        child: Text(isLoading ? l10n.registering : l10n.registerButton),
                       ),
                     ),
                   ),
@@ -205,19 +161,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
 
-          // Bottom text
           Padding(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: EdgeInsets.only(bottom: h * 0.04),
             child: Center(
               child: GestureDetector(
                 onTap: isLoading ? null : () => Navigator.pop(context),
                 child: Text(
                   l10n.haveAccount,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.black,
-                  ),
+                  style: TextStyle(fontSize: w * 0.04, fontWeight: FontWeight.bold, color: AppColors.black),
                 ),
               ),
             ),
@@ -232,17 +183,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required String hint,
     String? error,
     double topMargin = 15,
+    double fieldHeight = 50,
+    double fontSize = 14,
     TextInputType? keyboardType,
     bool obscureText = false,
     bool enabled = true,
   }) {
     return Padding(
-      padding: EdgeInsets.only(left: 15, right: 15, top: topMargin),
+      padding: EdgeInsets.only(top: topMargin),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 50,
+            height: fieldHeight,
             child: TextField(
               controller: controller,
               decoration: InputDecoration(
@@ -251,20 +204,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
               keyboardType: keyboardType,
               obscureText: obscureText,
-              style: const TextStyle(color: AppColors.black),
+              style: TextStyle(color: AppColors.black, fontSize: fontSize),
               enabled: enabled,
             ),
           ),
           if (error != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                error,
-                style: const TextStyle(
-                  color: Color(0xFFD32F2F),
-                  fontSize: 12,
-                ),
-              ),
+              child: Text(error, style: const TextStyle(color: Color(0xFFD32F2F), fontSize: 12)),
             ),
         ],
       ),

@@ -117,7 +117,7 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
 
   Future<void> fetchSchedules() async {
     try {
-      state = const ScheduleState(isLoading: true);
+      state = ScheduleState(isLoading: true, plans: state.plans);
       final resp = await _api.dio.get('schedules');
       final entries = (resp.data['schedules'] as List<dynamic>)
           .map((s) => ScheduleEntry.fromJson(s as Map<String, dynamic>))
@@ -189,7 +189,29 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
     }
   }
 
+  ScheduleEntry _withEnabled(ScheduleEntry e, bool enabled) => ScheduleEntry(
+        id: e.id,
+        name: e.name,
+        deviceId: e.deviceId,
+        pistonNumber: e.pistonNumber,
+        action: e.action,
+        cronExpression: e.cronExpression,
+        enabled: enabled,
+      );
+
   Future<void> togglePlan(SchedulePlan plan, bool enabled) async {
+    // Optimistic update — reflect change instantly in UI
+    final updatedPlans = state.plans.map((p) {
+      if (p.name == plan.name) {
+        return SchedulePlan(
+          activateEntry: p.activateEntry != null ? _withEnabled(p.activateEntry!, enabled) : null,
+          deactivateEntry: p.deactivateEntry != null ? _withEnabled(p.deactivateEntry!, enabled) : null,
+        );
+      }
+      return p;
+    }).toList();
+    state = ScheduleState(isLoading: false, plans: updatedPlans);
+
     try {
       final futures = <Future>[];
       if (plan.activateEntry != null) {
@@ -205,8 +227,10 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
         ));
       }
       await Future.wait(futures);
+    } catch (_) {
+      // Revert on failure
       await fetchSchedules();
-    } catch (_) {}
+    }
   }
 
   Future<void> deletePlan(SchedulePlan plan) async {

@@ -110,7 +110,7 @@ class DashboardScreen extends ConsumerWidget {
                               ),
                             ),
                           ),
-                          if (valveState.isLoading)
+                          if (valveState.isLoading && valveState.devices.isEmpty)
                             const SizedBox(
                               width: 16,
                               height: 16,
@@ -135,7 +135,7 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         child: SizedBox(
                           height: 150,
-                          child: valveState.isLoading
+                          child: valveState.isLoading && valveState.devices.isEmpty
                               ? const Center(child: CircularProgressIndicator())
                               : valveState.error != null
                                   ? Center(
@@ -197,7 +197,7 @@ class DashboardScreen extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                       child: NavCard(
-                        svgAsset: 'assets/icons/ic_water.svg',
+                        svgAsset: 'assets/icons/ic_valve.svg',
                         title: l10n.valveManagement,
                         description: l10n.valveManagementDescription,
                         onTap: () => Navigator.pushNamed(context, '/valves'),

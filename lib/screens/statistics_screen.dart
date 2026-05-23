@@ -275,13 +275,13 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                           child: _StatCard(
                               title: l10n.totalValves,
                               value: '$totalValves',
-                              color: AppColors.statDarkGreen)),
+                              color: const Color(0xFF156F35))),
                       const SizedBox(width: 12),
                       Expanded(
                           child: _StatCard(
                               title: l10n.activeNow,
                               value: '$activeNow',
-                              color: AppColors.primaryGreen)),
+                              color: const Color(0xFF4A8A33))),
                     ]),
                     const SizedBox(height: 12),
                     Row(children: [
@@ -289,13 +289,13 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                           child: _StatCard(
                               title: l10n.inactiveValves,
                               value: '$inactiveValves',
-                              color: AppColors.statMediumGreen)),
+                              color: const Color(0xFF7AAC29))),
                       const SizedBox(width: 12),
                       Expanded(
                           child: _StatCard(
                               title: l10n.maintenance,
                               value: '$maintenanceValves',
-                              color: AppColors.statLightGreen)),
+                              color: const Color(0xFF9AC42D))),
                     ]),
 
                     const SizedBox(height: 24),

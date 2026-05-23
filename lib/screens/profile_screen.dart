@@ -148,9 +148,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               child: Container(
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: _selectedTab == 0
-                                      ? AppColors.white
-                                      : AppColors.tabUnselectedBg,
+                                  color: AppColors.white,
                                   border: _selectedTab == 0
                                       ? const Border(
                                           bottom: BorderSide(
@@ -179,9 +177,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               child: Container(
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: _selectedTab == 1
-                                      ? AppColors.white
-                                      : AppColors.tabUnselectedBg,
+                                  color: AppColors.white,
                                   border: _selectedTab == 1
                                       ? const Border(
                                           bottom: BorderSide(
@@ -302,7 +298,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               width: 24,
               height: 24,
               colorFilter: const ColorFilter.mode(
-                AppColors.grayIcon,
+                AppColors.black,
                 BlendMode.srcIn,
               ),
             ),
@@ -368,7 +364,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               'assets/icons/ic_location.svg',
               width: 24,
               height: 24,
-              colorFilter: const ColorFilter.mode(AppColors.grayIcon, BlendMode.srcIn),
+              colorFilter: const ColorFilter.mode(AppColors.black, BlendMode.srcIn),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -429,11 +425,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Row(
         children: [
           SvgPicture.asset(
-            'assets/icons/ic_water.svg',
+            'assets/icons/ic_valve.svg',
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              AppColors.primaryGreen,
+              AppColors.black,
               BlendMode.srcIn,
             ),
           ),
@@ -441,9 +437,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Text(
             l10n.valvesToManage(valveCount),
             style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryGreen,
+              fontSize: 16,
+              color: AppColors.black,
             ),
           ),
         ],

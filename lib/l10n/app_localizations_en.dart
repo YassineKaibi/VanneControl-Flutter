@@ -224,7 +224,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get closed => 'Closed';
 
   @override
-  String get historyTitle => 'Valve operation history';
+  String get historyTitle => 'Valve Operation History';
 
   @override
   String get filterHistory => 'Filter History';

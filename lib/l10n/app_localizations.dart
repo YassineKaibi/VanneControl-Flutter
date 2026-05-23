@@ -521,7 +521,7 @@ abstract class AppLocalizations {
   /// No description provided for @historyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Valve operation history'**
+  /// **'Valve Operation History'**
   String get historyTitle;
 
   /// No description provided for @filterHistory.

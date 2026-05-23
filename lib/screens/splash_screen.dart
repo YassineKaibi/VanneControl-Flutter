@@ -15,6 +15,10 @@ class SplashScreen extends ConsumerWidget {
     final currentLocale = ref.watch(localeProvider);
     final isEn = currentLocale.languageCode == 'en';
 
+    final size = MediaQuery.of(context).size;
+    final h = size.height;
+    final w = size.width;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: AppColors.white,
@@ -27,7 +31,7 @@ class SplashScreen extends ConsumerWidget {
           children: [
             // Language selector - top right
             Padding(
-              padding: const EdgeInsets.only(top: 50, right: 20),
+              padding: EdgeInsets.only(top: h * 0.06, right: w * 0.05),
               child: Align(
                 alignment: Alignment.centerRight,
                 child: Row(
@@ -38,24 +42,24 @@ class SplashScreen extends ConsumerWidget {
                       child: Text(
                         'EN',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: w * 0.037,
                           fontWeight: FontWeight.bold,
                           color: isEn ? AppColors.primaryGreen : AppColors.black,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    const Text(
+                    SizedBox(width: w * 0.01),
+                    Text(
                       '|',
-                      style: TextStyle(fontSize: 14, color: AppColors.separatorGray),
+                      style: TextStyle(fontSize: w * 0.037, color: AppColors.separatorGray),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: w * 0.01),
                     GestureDetector(
                       onTap: () => ref.read(localeProvider.notifier).setLocale(const Locale('fr')),
                       child: Text(
                         'FR',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: w * 0.037,
                           fontWeight: FontWeight.bold,
                           color: !isEn ? AppColors.primaryGreen : AppColors.black,
                         ),
@@ -68,11 +72,11 @@ class SplashScreen extends ConsumerWidget {
 
             // Title
             Padding(
-              padding: const EdgeInsets.only(left: 30, top: 10),
+              padding: EdgeInsets.only(left: w * 0.08, top: h * 0.012),
               child: Text(
                 l10n.appName,
-                style: const TextStyle(
-                  fontSize: 35,
+                style: TextStyle(
+                  fontSize: w * 0.09,
                   fontWeight: FontWeight.bold,
                   color: AppColors.black,
                 ),
@@ -81,11 +85,11 @@ class SplashScreen extends ConsumerWidget {
 
             // Subtitle
             Padding(
-              padding: const EdgeInsets.only(left: 30, top: 15),
+              padding: EdgeInsets.only(left: w * 0.08, top: h * 0.015),
               child: Text(
                 l10n.appSubtitle,
-                style: const TextStyle(
-                  fontSize: 20,
+                style: TextStyle(
+                  fontSize: w * 0.05,
                   color: AppColors.subtitleGray,
                 ),
               ),
@@ -94,27 +98,21 @@ class SplashScreen extends ConsumerWidget {
             // Logo
             Expanded(
               child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 5),
-                  child: SvgPicture.asset(
-                    'assets/icons/ic_water.svg',
-                    width: 200,
-                    height: 200,
-                    colorFilter: const ColorFilter.mode(
-                      AppColors.primaryGreen,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                child: Image.asset(
+                  'assets/icons/logo_tesla_v2.png',
+                  width: w * 0.7,
+                  height: h * 0.4,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
 
             // Get Started button
             Padding(
-              padding: const EdgeInsets.only(left: 30, right: 30, top: 43, bottom: 24),
+              padding: EdgeInsets.only(left: w * 0.08, right: w * 0.08, top: h * 0.03, bottom: h * 0.04),
               child: SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: h * 0.065,
                 child: OutlinedButton(
                   onPressed: () {
                     Navigator.pushReplacementNamed(context, '/login');
