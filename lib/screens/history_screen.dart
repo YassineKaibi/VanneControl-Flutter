@@ -110,6 +110,19 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
+  String _translateValveName(String valve, AppLocalizations l10n) {
+    final match = RegExp(r'\d+').firstMatch(valve);
+    if (match == null) return valve;
+    return '${l10n.valve} ${match.group(0)}';
+  }
+
+  String _translateAction(String action, AppLocalizations l10n) {
+    final lower = action.toLowerCase();
+    if (lower.startsWith('open')) return l10n.opened;
+    if (lower.startsWith('clos')) return l10n.closed;
+    return action;
+  }
+
   bool get _hasActiveFilters =>
       _selectedValves.isNotEmpty ||
       _filterOpenings ||
@@ -409,8 +422,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       itemBuilder: (context, index) {
                         final item = filteredItems[index];
                         return HistoryItem(
-                          valveName: item['valve']!,
-                          action: item['action']!,
+                          valveName: _translateValveName(item['valve']!, l10n),
+                          action: _translateAction(item['action']!, l10n),
                           timestamp: item['time']!,
                           user: item['user']!,
                         );

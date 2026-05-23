@@ -32,14 +32,18 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
   ];
 
   static const _periodKeys = ['24h', '7d', '30d', '90d', '365d', 'all'];
-  static const _periodLabels = [
-    'Last 24 hours',
-    'Last 7 days',
-    'Last 30 days',
-    'Last 3 months',
-    'Last year',
-    'Since beginning',
-  ];
+
+  List<String> _periodLabels(AppLocalizations l10n) {
+    final fr = l10n.localeName.startsWith('fr');
+    return [
+      fr ? 'Dernières 24 heures' : 'Last 24 hours',
+      l10n.period7Days,
+      l10n.period30Days,
+      fr ? 'Derniers 3 mois' : 'Last 3 months',
+      fr ? 'Dernière année' : 'Last year',
+      l10n.sinceBeginning,
+    ];
+  }
 
   DateTime? _parseDate(String timeStr) {
     try {
@@ -305,33 +309,37 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                           color: AppColors.black),
                     ),
                     const SizedBox(height: 12),
-                    Row(children: [
-                      Expanded(
-                          child: _StatCard(
-                              title: l10n.totalValves,
-                              value: '$totalValves',
-                              color: const Color(0xFF156F35))),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: _StatCard(
-                              title: l10n.activeNow,
-                              value: '$activeNow',
-                              color: const Color(0xFF4A8A33))),
-                    ]),
+                    IntrinsicHeight(
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        Expanded(
+                            child: _StatCard(
+                                title: l10n.totalValves,
+                                value: '$totalValves',
+                                color: const Color(0xFF156F35))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: _StatCard(
+                                title: l10n.activeNow,
+                                value: '$activeNow',
+                                color: const Color(0xFF4A8A33))),
+                      ]),
+                    ),
                     const SizedBox(height: 12),
-                    Row(children: [
-                      Expanded(
-                          child: _StatCard(
-                              title: l10n.inactiveValves,
-                              value: '$inactiveValves',
-                              color: const Color(0xFF7AAC29))),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: _StatCard(
-                              title: l10n.maintenance,
-                              value: '$maintenanceValves',
-                              color: const Color(0xFF9AC42D))),
-                    ]),
+                    IntrinsicHeight(
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        Expanded(
+                            child: _StatCard(
+                                title: l10n.inactiveValves,
+                                value: '$inactiveValves',
+                                color: const Color(0xFF7AAC29))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: _StatCard(
+                                title: l10n.maintenance,
+                                value: '$maintenanceValves',
+                                color: const Color(0xFF9AC42D))),
+                      ]),
+                    ),
 
                     const SizedBox(height: 24),
                     Text(
@@ -414,7 +422,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                                   _periodKeys.length,
                                   (i) => DropdownMenuItem(
                                     value: _periodKeys[i],
-                                    child: Text(_periodLabels[i]),
+                                    child: Text(_periodLabels(l10n)[i]),
                                   ),
                                 ),
                                 onChanged: (v) =>
