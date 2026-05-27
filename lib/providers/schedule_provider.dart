@@ -91,20 +91,17 @@ class ScheduleState {
 }
 
 String buildCron(int hour, int minute, String repeat, {DateTime? onceDate, String? customDays}) {
-  // Convert local time to UTC for server-side cron execution
+  // Backend Quartz runs in Africa/Tunis — cron expressions are interpreted in local time.
+  // Do not convert to UTC; send the user's chosen hour/minute as-is.
   final baseDate = onceDate ?? DateTime.now();
-  final local = DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
-  final utc = local.toUtc();
-  final h = utc.hour;
-  final m = utc.minute;
 
   switch (repeat) {
     case 'Everyday':
-      return '0 $m $h * * ?';
+      return '0 $minute $hour * * ?';
     case 'Custom':
-      return '0 $m $h ? * ${customDays ?? 'MON'}';
+      return '0 $minute $hour ? * ${customDays ?? 'MON'}';
     default: // Once
-      return '0 $m $h ${utc.day} ${utc.month} ? ${utc.year}';
+      return '0 $minute $hour ${baseDate.day} ${baseDate.month} ? ${baseDate.year}';
   }
 }
 
