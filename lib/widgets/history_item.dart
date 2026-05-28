@@ -7,19 +7,20 @@ class HistoryItem extends StatelessWidget {
   final String action;
   final String timestamp;
   final String user;
+  final bool isOpen;
 
   const HistoryItem({
     super.key,
     required this.valveName,
     required this.action,
     required this.timestamp,
+    required this.isOpen,
     this.user = 'Admin',
   });
 
   @override
   Widget build(BuildContext context) {
-    final isOpened = action.toLowerCase() == 'opened' ||
-        action.toLowerCase() == 'activated';
+    final isOpened = isOpen;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -87,14 +88,16 @@ class HistoryItem extends StatelessWidget {
                         color: AppColors.descriptionGray,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Par: $user',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.placeholderGray,
+                    if (user.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Par: $user',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.placeholderGray,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

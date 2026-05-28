@@ -426,6 +426,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           action: _translateAction(item['action']!, l10n),
                           timestamp: item['time']!,
                           user: item['user']!,
+                          isOpen: item['action'] == 'Opened',
                         );
                       },
                     ),

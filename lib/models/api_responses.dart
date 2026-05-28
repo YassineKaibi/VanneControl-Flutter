@@ -1,4 +1,4 @@
-/// API response models - Matches ApiResponses.kt from the Android project.
+// API response models - Matches ApiResponses.kt from the Android project.
 
 class PistonModel {
   final int pistonNumber;
@@ -117,6 +117,26 @@ class ErrorResponse {
     return ErrorResponse(
       error: json['error'] as String?,
       message: json['message'] as String?,
+    );
+  }
+}
+
+class HistoryEvent {
+  final int pistonNumber;
+  final String action;       // "activated" or "deactivated"
+  final String timestamp;    // ISO-8601 UTC string
+
+  const HistoryEvent({
+    required this.pistonNumber,
+    required this.action,
+    required this.timestamp,
+  });
+
+  factory HistoryEvent.fromJson(Map<String, dynamic> json) {
+    return HistoryEvent(
+      pistonNumber: json['pistonNumber'] as int,
+      action: json['action'] as String,
+      timestamp: json['timestamp'] as String,
     );
   }
 }
