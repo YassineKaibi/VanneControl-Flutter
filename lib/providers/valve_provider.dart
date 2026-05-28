@@ -5,7 +5,6 @@ import '../services/api_client.dart';
 import '../services/token_manager.dart';
 import '../services/websocket_service.dart';
 import 'history_provider.dart';
-import 'profile_provider.dart';
 
 class ValveState {
   final bool isLoading;
@@ -149,27 +148,8 @@ class ValveNotifier extends StateNotifier<ValveState> {
         'state': currentlyActive ? 'inactive' : 'active',
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       });
-      _recordHistory(pistonNumber, currentlyActive);
+      _ref.read(historyProvider.notifier).refresh();
     } catch (_) {}
-  }
-
-  void _recordHistory(int pistonNumber, bool wasActive) {
-    final profile = _ref.read(profileProvider).valueOrNull;
-    final name = '${profile?.firstName ?? ''} ${profile?.lastName ?? ''}'.trim();
-    final user = name.isEmpty ? 'Admin' : name;
-
-    final now = DateTime.now();
-    final d = now.day.toString().padLeft(2, '0');
-    final m = now.month.toString().padLeft(2, '0');
-    final h = now.hour.toString().padLeft(2, '0');
-    final min = now.minute.toString().padLeft(2, '0');
-
-    _ref.read(historyProvider.notifier).addEntry(HistoryEntry(
-      valve: 'Valve $pistonNumber',
-      action: wasActive ? 'Closed' : 'Opened',
-      time: '$d/$m/${now.year} $h:$min',
-      user: user,
-    ));
   }
 
   Future<void> refresh() async {

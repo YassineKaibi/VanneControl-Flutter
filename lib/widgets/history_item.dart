@@ -87,14 +87,16 @@ class HistoryItem extends StatelessWidget {
                         color: AppColors.descriptionGray,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Par: $user',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.placeholderGray,
+                    if (user.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Par: $user',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.placeholderGray,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
